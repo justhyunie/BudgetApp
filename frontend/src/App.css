@@ -2979,3 +2979,373 @@ select:focus-visible {
     transition: none !important;
   }
 }
+
+/* =========================================================
+   COMPONENT REFACTOR COMPATIBILITY / POLISH
+   Keeps the existing BudgetApp visual system intact.
+========================================================= */
+
+/* ---------------------------------------------------------
+   MONTH NAVIGATOR
+--------------------------------------------------------- */
+
+.month-nav {
+  display: grid;
+  grid-template-columns: 34px 132px 34px;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  margin-bottom: 20px;
+}
+
+.month-nav strong {
+  width: 132px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 650;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.month-nav button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line-dark);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 22px;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.month-nav button:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  transform: translateY(-1px);
+}
+
+/* ---------------------------------------------------------
+   PAGE HEADER
+--------------------------------------------------------- */
+
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------
+   BALANCE HERO
+--------------------------------------------------------- */
+
+.balance-hero > div {
+  position: relative;
+  z-index: 1;
+}
+
+.balance-hero > div > strong {
+  display: block;
+  margin-top: 17px;
+  color: #ffffff;
+  font-size: clamp(40px, 5vw, 58px);
+  font-weight: 550;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.balance-hero > div > p {
+  margin: 10px 0 0;
+  color: #9ba19c;
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------
+   DASHBOARD CATEGORY SPENDING
+--------------------------------------------------------- */
+
+.category-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.category-main {
+  min-width: 0;
+}
+
+.category-main .category-heading {
+  min-width: 0;
+}
+
+.category-main .category-heading strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------
+   TRANSACTIONS
+--------------------------------------------------------- */
+
+.transaction-row {
+  grid-template-columns:
+    38px
+    minmax(0, 1fr)
+    minmax(74px, auto)
+    auto
+    28px;
+}
+
+.transaction-main {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.transaction-main strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transaction-main span {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transaction-date {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.icon-button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--faint);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.icon-button:hover {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.amount-positive {
+  color: var(--accent) !important;
+}
+
+.amount-negative {
+  color: var(--red) !important;
+}
+
+.transaction-row > strong {
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------
+   BUDGET COMPONENTS
+--------------------------------------------------------- */
+
+.budget-info {
+  min-width: 0;
+}
+
+.budget-info strong {
+  display: block;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.budget-info span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.budget-input-wrap {
+  width: 125px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line-dark);
+  border-radius: 7px;
+  background: #ffffff;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.budget-input-wrap > span {
+  padding-left: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.budget-input {
+  width: 100%;
+  height: 100%;
+  padding: 0 10px 0 4px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.budget-input-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px rgba(var(--accent-rgb), 0.08);
+}
+
+.budget-amount {
+  display: none;
+}
+
+/* ---------------------------------------------------------
+   ADD BUDGET FORM
+--------------------------------------------------------- */
+
+.add-budget-form .form-field > span {
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.add-budget-form .primary-button {
+  align-self: flex-start;
+}
+
+/* ---------------------------------------------------------
+   UI PANEL / HEADER HELPERS
+--------------------------------------------------------- */
+
+.panel-header-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.form-hint {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+/* ---------------------------------------------------------
+   MOBILE TRANSACTIONS
+--------------------------------------------------------- */
+
+@media (max-width: 720px) {
+  .month-nav {
+    grid-template-columns: 30px 112px 30px;
+    gap: 5px;
+  }
+
+  .month-nav strong {
+    width: 112px;
+    font-size: 11px;
+  }
+
+  .month-nav button {
+    width: 30px;
+    height: 30px;
+    font-size: 20px;
+  }
+
+  .transaction-row {
+    grid-template-columns:
+      34px
+      minmax(0, 1fr)
+      auto
+      28px;
+    gap: 9px;
+  }
+
+  .transaction-date {
+    display: none;
+  }
+
+  .transaction-main strong {
+    font-size: 12px;
+  }
+
+  .transaction-main span {
+    font-size: 10px;
+  }
+
+  .transaction-row > strong {
+    font-size: 12px;
+  }
+
+  .budget-input-wrap {
+    width: 105px;
+  }
+}
+
+@media (max-width: 380px) {
+  .transaction-row {
+    grid-template-columns:
+      30px
+      minmax(0, 1fr)
+      auto
+      26px;
+    gap: 7px;
+  }
+
+  .transaction-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .budget-input-wrap {
+    width: 95px;
+  }
+}
