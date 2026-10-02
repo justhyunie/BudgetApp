@@ -1,6 +1,7 @@
 import { useMemo } from "react";
+
 import { api } from "../utils/api";
-import { money, shortMoney } from "../utils/formatting";
+import { money } from "../utils/formatting";
 
 export default function Wealth({
   accounts,
@@ -8,48 +9,56 @@ export default function Wealth({
   wealthHistory,
   setWealthHistory,
 }) {
-  const assets = useMemo(
-    () =>
-      accounts
-        .filter(
-          (account) =>
-            account.type !== "liability" &&
-            account.type !== "debt",
-        )
-        .reduce(
-          (total, account) =>
-            total + Number(account.balance || 0),
-          0,
-        ),
-    [accounts],
-  );
+  const {
+    assets,
+    liabilities,
+    netWorth,
+  } = useMemo(() => {
+    const assets = accounts
+      .filter(
+        (account) =>
+          account.type !== "liability",
+      )
+      .reduce(
+        (sum, account) =>
+          sum +
+          Number(account.balance || 0),
+        0,
+      );
 
-  const liabilities = useMemo(
-    () =>
-      accounts
-        .filter(
-          (account) =>
-            account.type === "liability" ||
-            account.type === "debt",
-        )
-        .reduce(
-          (total, account) =>
-            total + Number(account.balance || 0),
-          0,
-        ),
-    [accounts],
-  );
+    const liabilities = accounts
+      .filter(
+        (account) =>
+          account.type === "liability",
+      )
+      .reduce(
+        (sum, account) =>
+          sum +
+          Math.abs(
+            Number(account.balance || 0),
+          ),
+        0,
+      );
 
-  const netWorth = assets - liabilities;
+    return {
+      assets,
+      liabilities,
+      netWorth: assets - liabilities,
+    };
+  }, [accounts]);
 
-  async function updateAccount(id, balance) {
+  async function updateAccount(
+    id,
+    field,
+    value,
+  ) {
     try {
       const updated = await api(
         `/api/accounts/${id}`,
         {
           method: "PATCH",
           body: JSON.stringify({
-            balance: Number(balance),
+            [field]: value,
           }),
         },
       );
@@ -66,23 +75,21 @@ export default function Wealth({
     }
   }
 
-  async function saveSnapshot() {
+  async function saveWealthSnapshot() {
     try {
       const snapshot = await api(
         "/api/wealth-history",
         {
           method: "POST",
           body: JSON.stringify({
-            net_worth: netWorth,
-            assets,
-            liabilities,
+            value: netWorth,
           }),
         },
       );
 
       setWealthHistory((current) => [
-        ...current,
         snapshot,
+        ...current,
       ]);
     } catch (error) {
       console.error(error);
@@ -91,256 +98,249 @@ export default function Wealth({
 
   const assetAccounts = accounts.filter(
     (account) =>
-      account.type !== "liability" &&
-      account.type !== "debt",
+      account.type !== "liability",
   );
 
   const liabilityAccounts =
     accounts.filter(
       (account) =>
-        account.type === "liability" ||
-        account.type === "debt",
+        account.type === "liability",
     );
 
   return (
-    <div className="page">
+    <div className="page wealth-page">
       <header className="page-header">
         <div>
           <div className="section-kicker">
-            Long-Term Finances
+            Financial Position
           </div>
 
           <h1>Wealth</h1>
 
           <p>
-            Track your assets, liabilities, and
-            overall net worth.
+            Track your assets, liabilities,
+            and overall net worth.
           </p>
         </div>
 
         <button
-          className="secondary-button"
-          onClick={saveSnapshot}
+          className="primary-button"
+          type="button"
+          onClick={saveWealthSnapshot}
         >
           Save Snapshot
         </button>
       </header>
 
-      <section className="wealth-hero">
-        <div>
-          <span>Net Worth</span>
+      <section className="wealth-overview">
+        <div className="wealth-overview-main">
+          <div className="section-kicker">
+            Net Worth
+          </div>
 
-          <strong>{money(netWorth)}</strong>
+          <div className="wealth-total">
+            {money(netWorth)}
+          </div>
 
-          <small>
-            {money(assets)} in assets ·{" "}
-            {money(liabilities)} in liabilities
-          </small>
+          <p>
+            Total assets minus total
+            liabilities.
+          </p>
         </div>
 
-        <div className="wealth-breakdown">
-          <div>
+        <div className="wealth-stat-grid">
+          <div className="wealth-stat">
             <span>Assets</span>
             <strong>
-              {shortMoney(assets)}
+              {money(assets)}
             </strong>
           </div>
 
-          <div>
+          <div className="wealth-stat">
             <span>Liabilities</span>
             <strong>
-              {shortMoney(liabilities)}
+              {money(liabilities)}
             </strong>
           </div>
         </div>
       </section>
 
-      <section className="equity-bar">
-        <div
-          className="equity-bar-assets"
-          style={{
-            width:
-              assets + liabilities > 0
-                ? `${Math.min(
-                    100,
-                    (assets /
-                      (assets +
-                        liabilities)) *
-                      100,
-                  )}%`
-                : "0%",
-          }}
-        />
-      </section>
-
-      <div className="wealth-account-grid">
+      <div className="wealth-grid">
         <section className="panel">
           <div className="panel-header">
             <div>
-              <h2>Assets</h2>
+              <div className="section-kicker">
+                What You Own
+              </div>
 
-              <p>
-                Accounts that contribute to your
-                net worth.
-              </p>
+              <h2>Assets</h2>
             </div>
+
+            <strong>
+              {money(assets)}
+            </strong>
           </div>
 
-          {assetAccounts.length === 0 ? (
-            <div className="empty-state">
-              No asset accounts found.
-            </div>
-          ) : (
-            <div className="wealth-account-list">
-              {assetAccounts.map(
-                (account) => (
-                  <AccountRow
-                    key={account.id}
-                    account={account}
-                    onSave={updateAccount}
+          <div className="wealth-account-list">
+            {assetAccounts.length === 0 ? (
+              <div className="empty-state">
+                No assets yet.
+              </div>
+            ) : (
+              assetAccounts.map((account) => (
+                <div
+                  className="wealth-account"
+                  key={account.id}
+                >
+                  <div className="wealth-account-info">
+                    <strong>
+                      {account.name}
+                    </strong>
+
+                    <span>
+                      {account.type ||
+                        "Asset"}
+                    </span>
+                  </div>
+
+                  <div className="wealth-account-value">
+                    {money(
+                      account.balance,
+                    )}
+                  </div>
+
+                  <input
+                    className="wealth-account-input"
+                    type="number"
+                    step="0.01"
+                    value={
+                      account.balance ?? ""
+                    }
+                    onChange={(event) =>
+                      updateAccount(
+                        account.id,
+                        "balance",
+                        Number(
+                          event.target.value,
+                        ),
+                      )
+                    }
+                    aria-label={`${account.name} balance`}
                   />
-                ),
-              )}
-            </div>
-          )}
+                </div>
+              ))
+            )}
+          </div>
         </section>
 
         <section className="panel">
           <div className="panel-header">
             <div>
-              <h2>Liabilities</h2>
+              <div className="section-kicker">
+                What You Owe
+              </div>
 
-              <p>
-                Debts and other amounts owed.
-              </p>
+              <h2>Liabilities</h2>
             </div>
+
+            <strong>
+              {money(liabilities)}
+            </strong>
           </div>
 
-          {liabilityAccounts.length === 0 ? (
-            <div className="empty-state">
-              No liabilities found.
-            </div>
-          ) : (
-            <div className="wealth-account-list">
-              {liabilityAccounts.map(
+          <div className="wealth-account-list">
+            {liabilityAccounts.length === 0 ? (
+              <div className="empty-state">
+                No liabilities yet.
+              </div>
+            ) : (
+              liabilityAccounts.map(
                 (account) => (
-                  <AccountRow
+                  <div
+                    className="wealth-account"
                     key={account.id}
-                    account={account}
-                    liability
-                    onSave={updateAccount}
-                  />
+                  >
+                    <div className="wealth-account-info">
+                      <strong>
+                        {account.name}
+                      </strong>
+
+                      <span>
+                        Liability
+                      </span>
+                    </div>
+
+                    <div className="wealth-account-value liability">
+                      {money(
+                        account.balance,
+                      )}
+                    </div>
+
+                    <input
+                      className="wealth-account-input"
+                      type="number"
+                      step="0.01"
+                      value={
+                        account.balance ?? ""
+                      }
+                      onChange={(event) =>
+                        updateAccount(
+                          account.id,
+                          "balance",
+                          Number(
+                            event.target
+                              .value,
+                          ),
+                        )
+                      }
+                      aria-label={`${account.name} balance`}
+                    />
+                  </div>
                 ),
-              )}
-            </div>
-          )}
+              )
+            )}
+          </div>
         </section>
       </div>
 
-      <section className="panel">
+      <section className="panel wealth-history-panel">
         <div className="panel-header">
           <div>
-            <h2>Wealth History</h2>
+            <div className="section-kicker">
+              Progress
+            </div>
 
-            <p>
-              Track how your net worth changes over
-              time.
-            </p>
+            <h2>Wealth History</h2>
           </div>
         </div>
 
-        {wealthHistory.length === 0 ? (
-          <div className="empty-state">
-            No wealth snapshots yet.
-          </div>
-        ) : (
-          <div className="wealth-history-list">
-            {[...wealthHistory]
-              .reverse()
-              .map((snapshot, index) => (
-                <div
-                  className="wealth-history-row"
-                  key={
-                    snapshot.id ??
-                    `${snapshot.date}-${index}`
-                  }
-                >
-                  <div>
-                    <strong>
-                      {snapshot.date
-                        ? new Date(
-                            snapshot.date,
-                          ).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            },
-                          )
-                        : "Snapshot"}
-                    </strong>
-                  </div>
-
+        <div className="wealth-history-list">
+          {wealthHistory.length === 0 ? (
+            <div className="empty-state">
+              No snapshots recorded yet.
+            </div>
+          ) : (
+            wealthHistory.map((snapshot) => (
+              <div
+                className="wealth-history-item"
+                key={snapshot.id}
+              >
+                <div>
                   <strong>
-                    {money(
-                      snapshot.net_worth ??
-                        snapshot.netWorth ??
-                        0,
-                    )}
+                    {money(snapshot.value)}
                   </strong>
+
+                  <span>
+                    {snapshot.date ||
+                      snapshot.created_at ||
+                      ""}
+                  </span>
                 </div>
-              ))}
-          </div>
-        )}
+              </div>
+            ))
+          )}
+        </div>
       </section>
-    </div>
-  );
-}
-
-function AccountRow({
-  account,
-  liability = false,
-  onSave,
-}) {
-  return (
-    <div className="wealth-account-row">
-      <div className="wealth-account-info">
-        <strong>
-          {account.name ||
-            account.account_name ||
-            "Account"}
-        </strong>
-
-        <span>
-          {account.institution ||
-            account.type ||
-            ""}
-        </span>
-      </div>
-
-      <input
-        className="wealth-account-input"
-        type="number"
-        step="0.01"
-        defaultValue={account.balance || 0}
-        onBlur={(event) =>
-          onSave(
-            account.id,
-            event.target.value,
-          )
-        }
-      />
-
-      <strong
-        className={
-          liability
-            ? "amount-negative"
-            : "amount-positive"
-        }
-      >
-        {money(account.balance)}
-      </strong>
     </div>
   );
 }

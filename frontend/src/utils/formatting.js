@@ -1,8 +1,11 @@
 export function money(value) {
-  return Number(value || 0).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
+  return Number(value || 0).toLocaleString(
+    "en-US",
+    {
+      style: "currency",
+      currency: "USD",
+    },
+  );
 }
 
 export function shortMoney(value) {
@@ -22,24 +25,39 @@ export function shortMoney(value) {
 export function formatDate(date) {
   if (!date) return "";
 
-  const value = new Date(`${date}T00:00:00`);
+  const raw = String(date);
 
-  if (Number.isNaN(value.getTime())) return date;
+  const value =
+    raw.length <= 10
+      ? new Date(`${raw}T00:00:00`)
+      : new Date(raw);
 
-  return value.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  if (Number.isNaN(value.getTime())) {
+    return raw;
+  }
+
+  return value.toLocaleDateString(
+    "en-US",
+    {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    },
+  );
 }
 
 export function formatMonth(date) {
-  const value = new Date(`${date}-01T00:00:00`);
+  const value = new Date(
+    `${date}-01T00:00:00`,
+  );
 
-  return value.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  return value.toLocaleDateString(
+    "en-US",
+    {
+      month: "long",
+      year: "numeric",
+    },
+  );
 }
 
 export function monthKey(date) {
@@ -49,9 +67,13 @@ export function monthKey(date) {
 }
 
 export function getInitialDate() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date()
+    .toISOString()
+    .slice(0, 10);
 }
 
 export function getMonthDate() {
-  return new Date().toISOString().slice(0, 7);
+  return new Date()
+    .toISOString()
+    .slice(0, 7);
 }

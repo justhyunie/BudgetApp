@@ -119,7 +119,7 @@ app.get("/api/transactions", async (req, res) => {
         date,
         description,
         amount,
-        category,
+        category, type,
         created_at
       FROM transactions
       ORDER BY date DESC, id DESC

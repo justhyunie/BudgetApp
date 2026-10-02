@@ -1,40 +1,80 @@
-import { categoryIcon } from "../../utils/categories";
 import { money } from "../../utils/formatting";
+import { categoryIcon } from "../../utils/categories";
 
 export default function CategorySpending({
-  categoryTotals,
-  budgetTotal,
+  budgets = [],
+  categorySpending = {},
 }) {
-  const categories = Object.entries(categoryTotals);
+  const safeBudgets = Array.isArray(budgets)
+    ? budgets
+    : [];
+
+  const safeSpending =
+    categorySpending &&
+    typeof categorySpending === "object"
+      ? categorySpending
+      : {};
+
+  const categories = Object.entries(
+    safeSpending,
+  )
+    .map(([category, spent]) => ({
+      category,
+      spent: Number(spent) || 0,
+      budget:
+        Number(
+          safeBudgets.find(
+            (item) =>
+              item.category === category,
+          )?.amount,
+        ) || 0,
+    }))
+    .sort((a, b) => b.spent - a.spent);
+
+  if (categories.length === 0) {
+    return (
+      <section className="panel category-spending">
+        <div className="panel-header">
+          <div>
+            <div className="section-kicker">
+              Spending
+            </div>
+
+            <h2>By Category</h2>
+          </div>
+        </div>
+
+        <div className="empty-state">
+          No spending recorded this month.
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="panel">
+    <section className="panel category-spending">
       <div className="panel-header">
         <div>
           <div className="section-kicker">
             Spending
           </div>
 
-          <h2>Category Spending</h2>
-
-          <p>
-            Where your money is going this month.
-          </p>
+          <h2>By Category</h2>
         </div>
       </div>
 
-      {categories.length === 0 ? (
-        <div className="empty-state">
-          No spending recorded this month.
-        </div>
-      ) : (
-        <div className="category-list">
-          {categories.map(([category, amount]) => {
+      <div className="category-list">
+        {categories.map(
+          ({
+            category,
+            spent,
+            budget,
+          }) => {
             const percentage =
-              budgetTotal > 0
+              budget > 0
                 ? Math.min(
+                    (spent / budget) * 100,
                     100,
-                    (amount / budgetTotal) * 100,
                   )
                 : 0;
 
@@ -47,29 +87,37 @@ export default function CategorySpending({
                   {categoryIcon(category)}
                 </div>
 
-                <div className="category-main">
-                  <div className="category-heading">
-                    <strong>{category}</strong>
+                <div className="category-info">
+                  <strong>
+                    {category}
+                  </strong>
 
-                    <span>
-                      {money(amount)}
-                    </span>
-                  </div>
-
-                  <div className="progress-track">
+                  <div className="category-progress">
                     <div
-                      className="progress-fill"
+                      className="category-progress-fill"
                       style={{
                         width: `${percentage}%`,
                       }}
                     />
                   </div>
                 </div>
+
+                <div className="category-values">
+                  <strong>
+                    {money(spent)}
+                  </strong>
+
+                  {budget > 0 && (
+                    <span>
+                      of {money(budget)}
+                    </span>
+                  )}
+                </div>
               </div>
             );
-          })}
-        </div>
-      )}
+          },
+        )}
+      </div>
     </section>
   );
 }

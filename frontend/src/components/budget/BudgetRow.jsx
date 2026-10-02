@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { api } from "../../utils/api";
-import { money } from "../../utils/formatting";
 
 export default function BudgetRow({
   budget,
@@ -10,9 +9,18 @@ export default function BudgetRow({
   const [amount, setAmount] = useState(
     budget.amount ?? "",
   );
+
   const [saving, setSaving] = useState(false);
 
   async function saveBudget() {
+    if (
+      amount === "" ||
+      Number(amount) < 0 ||
+      Number(amount) === Number(budget.amount)
+    ) {
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -61,10 +69,7 @@ export default function BudgetRow({
     <div className="budget-row">
       <div className="budget-info">
         <strong>{budget.category}</strong>
-
-        <span>
-          Monthly budget
-        </span>
+        <span>Monthly budget</span>
       </div>
 
       <div className="budget-input-wrap">
@@ -80,19 +85,21 @@ export default function BudgetRow({
             setAmount(event.target.value)
           }
           onBlur={saveBudget}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.currentTarget.blur();
+            }
+          }}
           disabled={saving}
         />
       </div>
-
-      <strong className="budget-amount">
-        {money(budget.amount)}
-      </strong>
 
       <button
         className="icon-button"
         type="button"
         onClick={deleteBudget}
         title="Delete budget"
+        aria-label={`Delete ${budget.category} budget`}
       >
         ×
       </button>

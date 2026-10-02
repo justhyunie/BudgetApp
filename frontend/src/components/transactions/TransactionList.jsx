@@ -1,9 +1,10 @@
 import { api } from "../../utils/api";
-import {
-  formatDate,
-  money,
-} from "../../utils/formatting";
+import { formatDate, money } from "../../utils/formatting";
 import { categoryIcon } from "../../utils/categories";
+import {
+  getTransactionType,
+  transactionAmount,
+} from "../../utils/transactions";
 
 export default function TransactionList({
   transactions,
@@ -11,21 +12,14 @@ export default function TransactionList({
   setError,
 }) {
   async function deleteTransaction(id) {
-    if (
-      !window.confirm(
-        "Delete this transaction?",
-      )
-    ) {
+    if (!window.confirm("Delete this transaction?")) {
       return;
     }
 
     try {
-      await api(
-        `/api/transactions/${id}`,
-        {
-          method: "DELETE",
-        },
-      );
+      await api(`/api/transactions/${id}`, {
+        method: "DELETE",
+      });
 
       setTransactions((current) =>
         current.filter(
@@ -55,66 +49,63 @@ export default function TransactionList({
 
   return (
     <div className="transaction-list">
-      {transactions.map(
-        (transaction) => (
+      {transactions.map((transaction) => {
+        const type =
+          getTransactionType(transaction);
+
+        const amount =
+          transactionAmount(transaction);
+
+        const income = type === "income";
+
+        return (
           <div
             className="transaction-row"
             key={transaction.id}
           >
             <div className="transaction-icon">
-              {categoryIcon(
-                transaction.category,
-              )}
+              {categoryIcon(transaction.category)}
             </div>
 
-            <div className="transaction-main">
+            <div className="transaction-info">
               <strong>
                 {transaction.description}
               </strong>
 
               <span>
-                {transaction.category ||
-                  "Other"}
+                {transaction.category || "Other"}
               </span>
             </div>
 
             <span className="transaction-date">
-              {formatDate(
-                transaction.date,
-              )}
+              {formatDate(transaction.date)}
             </span>
 
             <strong
-              className={
-                transaction.type ===
-                "income"
-                  ? "amount-positive"
-                  : "amount-negative"
-              }
+              className={`transaction-amount ${
+                income ? "income" : ""
+              }`}
             >
-              {transaction.type ===
-              "income"
-                ? "+"
-                : "-"}
-              {money(
-                transaction.amount,
-              )}
+              {income ? "+" : "-"}
+              {money(amount)}
             </strong>
 
             <button
-              className="icon-button"
+              className="delete-button"
+              type="button"
               onClick={() =>
                 deleteTransaction(
                   transaction.id,
                 )
               }
               title="Delete transaction"
+              aria-label={`Delete ${transaction.description}`}
             >
               ×
             </button>
           </div>
-        ),
-      )}
+        );
+      })}
     </div>
   );
 }
