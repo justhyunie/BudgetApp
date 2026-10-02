@@ -36,30 +36,6 @@ const initialTransactions = [
     type: "income",
     date: "2026-10-01",
   },
-  {
-    id: 2,
-    name: "Rent",
-    category: "Housing",
-    amount: 1150,
-    type: "expense",
-    date: "2026-10-01",
-  },
-  {
-    id: 3,
-    name: "Groceries",
-    category: "Food",
-    amount: 86.42,
-    type: "expense",
-    date: "2026-10-01",
-  },
-  {
-    id: 4,
-    name: "Gas",
-    category: "Transportation",
-    amount: 42.15,
-    type: "expense",
-    date: "2026-10-01",
-  },
 ];
 
 const initialBudgets = {
@@ -82,14 +58,6 @@ function formatCurrency(value) {
   }).format(value);
 }
 
-function formatShortCurrency(value) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 function formatDate(date) {
   return new Date(`${date}T12:00:00`).toLocaleDateString("en-US", {
     month: "short",
@@ -98,6 +66,26 @@ function formatDate(date) {
 }
 
 function App() {
+  const [isUnlocked, setIsUnlocked] = useState(() => {
+    return sessionStorage.getItem("budgetapp-unlocked") === "true";
+  });
+
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState("");
+
+  function unlockApp(event) {
+    event.preventDefault();
+
+    if (pin === "3517") {
+      sessionStorage.setItem("budgetapp-unlocked", "true");
+      setIsUnlocked(true);
+      setPin("");
+      setPinError("");
+    } else {
+      setPin("");
+      setPinError("Incorrect PIN.");
+    }
+  }
   const [activeTab, setActiveTab] = useState("budget");
   const [showAdd, setShowAdd] = useState(false);
   const [showBudgetEditor, setShowBudgetEditor] = useState(false);
@@ -143,8 +131,17 @@ function App() {
   }, [transactions]);
 
   useEffect(() => {
-    localStorage.setItem("budgetapp-budgets", JSON.stringify(budgets));
+    localStorage.setItem(
+      "budgetapp-budgets",
+      JSON.stringify(budgets)
+    );
   }, [budgets]);
+
+  /*
+   * ============================
+   * INCOME
+   * ============================
+   */
 
   const income = useMemo(() => {
     return transactions
@@ -152,31 +149,77 @@ function App() {
       .reduce((total, transaction) => total + transaction.amount, 0);
   }, [transactions]);
 
+  /*
+   * ============================
+   * ACTUAL EXPENSES
+   * ============================
+   */
+
   const expenses = useMemo(() => {
     return transactions
       .filter((transaction) => transaction.type === "expense")
       .reduce((total, transaction) => total + transaction.amount, 0);
   }, [transactions]);
 
+  /*
+   * ============================
+   * PLANNED BUDGET
+   * ============================
+   */
+
+  const totalBudget = useMemo(() => {
+    return Object.values(budgets).reduce(
+      (total, amount) => total + Number(amount || 0),
+      0
+    );
+  }, [budgets]);
+
+  /*
+   * ============================
+   * MONEY LEFT AFTER ACTUAL
+   * ============================
+   */
+
   const remaining = income - expenses;
 
-  const totalBudget = Object.values(budgets).reduce(
-    (total, amount) => total + Number(amount || 0),
-    0
-  );
+  /*
+   * ============================
+   * MONEY NOT YET ASSIGNED
+   *
+   * Example:
+   *
+   * Income = $4,000
+   * Budget = $3,500
+   *
+   * Unallocated = $500
+   * ============================
+   */
 
-  const budgetUsedPercent =
-    totalBudget > 0 ? Math.min((expenses / totalBudget) * 100, 100) : 0;
+  const unallocated = income - totalBudget;
 
-  function getCategorySpent(categoryName) {
-    return transactions
-      .filter(
-        (transaction) =>
-          transaction.type === "expense" &&
-          transaction.category === categoryName
-      )
-      .reduce((total, transaction) => total + transaction.amount, 0);
-  }
+  /*
+   * ============================
+   * TOTAL BUDGET REMAINING
+   *
+   * This is different from
+   * actual cash remaining.
+   *
+   * Example:
+   *
+   * Food budget = $400
+   * Food spending = $100
+   *
+   * Food remaining = $300
+   * ============================
+   */
+
+  const budgetRemaining = totalBudget - expenses;
+
+  /*
+   * ============================
+   * ADD TRANSACTION
+   * ============================
+   */
 
   function addTransaction(event) {
     event.preventDefault();
@@ -196,18 +239,53 @@ function App() {
       date: new Date().toISOString().split("T")[0],
     };
 
-    setTransactions((current) => [newTransaction, ...current]);
+    setTransactions((current) => [
+      newTransaction,
+      ...current,
+    ]);
 
     setName("");
     setAmount("");
     setShowAdd(false);
   }
 
+  /*
+   * ============================
+   * DELETE TRANSACTION
+   * ============================
+   */
+
   function deleteTransaction(id) {
     setTransactions((current) =>
       current.filter((transaction) => transaction.id !== id)
     );
   }
+
+  /*
+   * ============================
+   * GET ACTUAL SPENDING
+   * FOR A CATEGORY
+   * ============================
+   */
+
+  function getCategorySpent(categoryName) {
+    return transactions
+      .filter(
+        (transaction) =>
+          transaction.type === "expense" &&
+          transaction.category === categoryName
+      )
+      .reduce(
+        (total, transaction) => total + transaction.amount,
+        0
+      );
+  }
+
+  /*
+   * ============================
+   * CHANGE BUDGET
+   * ============================
+   */
 
   function updateBudget(categoryName, value) {
     setBudgets((current) => ({
@@ -216,161 +294,109 @@ function App() {
     }));
   }
 
-  function renderBudget() {
-    return (
-      <>
-        <section className="hero-card">
-          <div className="hero-top">
-            <div>
-              <span className="eyebrow">OCTOBER 2026</span>
-              <h1>Monthly Budget</h1>
-            </div>
+  /*
+   * ============================
+   * RESET EVERYTHING
+   * ============================
+   */
 
-            <button
-              className="month-selector"
-              onClick={() => alert("Month selector coming next.")}
-            >
-              October <span>⌄</span>
-            </button>
-          </div>
+  function resetApp() {
+    if (
+      !window.confirm(
+        "Reset your entire budget? This will delete all transactions and restore the default budget."
+      )
+    ) {
+      return;
+    }
 
-          <div className="remaining-label">Money remaining</div>
-
-          <div className={`remaining ${remaining < 0 ? "negative" : ""}`}>
-            {formatCurrency(remaining)}
-          </div>
-
-          <div className="hero-stats">
-            <div>
-              <span>Income</span>
-              <strong>{formatCurrency(income)}</strong>
-            </div>
-
-            <div>
-              <span>Spent</span>
-              <strong>{formatCurrency(expenses)}</strong>
-            </div>
-
-            <div>
-              <span>Budget</span>
-              <strong>{formatCurrency(totalBudget)}</strong>
-            </div>
-          </div>
-        </section>
-
-        <section className="progress-card">
-          <div className="progress-header">
-            <div>
-              <h2>Monthly spending</h2>
-              <p>
-                {formatCurrency(expenses)} of{" "}
-                {formatCurrency(totalBudget)}
-              </p>
-            </div>
-
-            <strong>{Math.round(budgetUsedPercent)}%</strong>
-          </div>
-
-          <div className="progress-track">
-            <div
-              className="progress-fill"
-              style={{ width: `${budgetUsedPercent}%` }}
-            />
-          </div>
-        </section>
-
-        <section className="section">
-          <div className="section-header">
-            <div>
-              <h2>Budget categories</h2>
-              <p>Track where your money is going</p>
-            </div>
-
-            <button
-              className="text-button"
-              onClick={() => setShowBudgetEditor(true)}
-            >
-              Edit
-            </button>
-          </div>
-
-          <div className="category-list">
-            {categories.map((item) => {
-              const spent = getCategorySpent(item);
-              const budget = Number(budgets[item] || 0);
-              const percent =
-                budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
-              const overBudget = spent > budget && budget > 0;
-
-              return (
-                <div className="category-card" key={item}>
-                  <div className="category-icon">
-                    {categoryIcons[item]}
-                  </div>
-
-                  <div className="category-main">
-                    <div className="category-title">
-                      <strong>{item}</strong>
-                      <span className={overBudget ? "over" : ""}>
-                        {formatCurrency(spent)} / {formatCurrency(budget)}
-                      </span>
-                    </div>
-
-                    <div className="category-track">
-                      <div
-                        className={`category-fill ${
-                          overBudget ? "over-fill" : ""
-                        }`}
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <span className="category-percent">
-                    {Math.round(percent)}%
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="section transactions-section">
-          <div className="section-header">
-            <div>
-              <h2>Recent transactions</h2>
-              <p>Your latest activity</p>
-            </div>
-
-            <button
-              className="text-button"
-              onClick={() => setActiveTab("transactions")}
-            >
-              See all
-            </button>
-          </div>
-
-          <TransactionList
-            transactions={transactions.slice(0, 5)}
-            onDelete={deleteTransaction}
-          />
-        </section>
-      </>
-    );
+    setTransactions(initialTransactions);
+    setBudgets(initialBudgets);
   }
+
+  /*
+   * ============================
+   * BUDGET PAGE
+   * ============================
+   */
+
+  function renderBudget() {
+    const spendingPercent =
+      totalBudget > 0
+        ? Math.min((expenses / totalBudget) * 100, 100)
+        : 0;
+
+    if (!isUnlocked) {
+      return (
+        <div className="lock-screen">
+          <div className="lock-card">
+            <div className="lock-icon">🔒</div>
+
+            <span className="eyebrow">BUDGETAPP</span>
+
+            <h1>Enter PIN</h1>
+
+            <p>
+              Enter your PIN to view your budget and
+              transactions.
+            </p>
+
+            <form onSubmit={unlockApp}>
+              <input
+                autoFocus
+                type="password"
+                inputMode="numeric"
+                maxLength="4"
+                placeholder="••••"
+                value={pin}
+                onChange={(event) => {
+                  setPin(
+                    event.target.value.replace(/\D/g, "")
+                  );
+                  setPinError("");
+                }}
+              />
+
+              {pinError && (
+                <div className="pin-error">
+                  {pinError}
+                </div>
+              )}
+
+              <button type="submit">
+                Unlock
+              </button>
+            </form>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  /*
+   * ============================
+   * TRANSACTIONS PAGE
+   * ============================
+   */
 
   function renderTransactions() {
     return (
       <>
         <div className="page-heading">
-          <span className="eyebrow">OCTOBER 2026</span>
+          <span className="eyebrow">
+            OCTOBER 2026
+          </span>
+
           <h1>Transactions</h1>
-          <p>Every dollar in one place.</p>
+
+          <p>
+            Every dollar in one place.
+          </p>
         </div>
 
         <section className="transaction-summary">
           <div>
             <span>Income</span>
+
             <strong className="income-text">
               {formatCurrency(income)}
             </strong>
@@ -378,6 +404,7 @@ function App() {
 
           <div>
             <span>Expenses</span>
+
             <strong className="expense-text">
               {formatCurrency(expenses)}
             </strong>
@@ -394,52 +421,67 @@ function App() {
     );
   }
 
+  /*
+   * ============================
+   * SETTINGS
+   * ============================
+   */
+
   function renderSettings() {
     return (
       <>
         <div className="page-heading">
-          <span className="eyebrow">BUDGETAPP</span>
+          <span className="eyebrow">
+            BUDGETAPP
+          </span>
+
           <h1>Settings</h1>
-          <p>Manage your budget preferences.</p>
+
+          <p>
+            Manage your budget.
+          </p>
         </div>
 
         <section className="settings-card">
           <div className="settings-row">
             <div>
               <strong>Currency</strong>
-              <span>United States Dollar</span>
-            </div>
-            <span className="settings-value">USD</span>
-          </div>
 
-          <div className="settings-row">
-            <div>
-              <strong>Storage</strong>
-              <span>Saved locally on this device</span>
+              <span>
+                United States Dollar
+              </span>
             </div>
-            <span className="status-dot">●</span>
+
+            <span className="settings-value">
+              USD
+            </span>
           </div>
 
           <div className="settings-row">
             <div>
               <strong>Transactions</strong>
-              <span>{transactions.length} total transactions</span>
+
+              <span>
+                {transactions.length} total
+              </span>
+            </div>
+          </div>
+
+          <div className="settings-row">
+            <div>
+              <strong>Monthly income</strong>
+
+              <span>
+                {formatCurrency(income)}
+              </span>
             </div>
           </div>
 
           <button
             className="danger-button"
-            onClick={() => {
-              if (
-                window.confirm(
-                  "Delete all transactions and restore the sample data?"
-                )
-              ) {
-                setTransactions(initialTransactions);
-              }
-            }}
+            onClick={resetApp}
           >
-            Reset transactions
+            Reset budget
           </button>
         </section>
       </>
@@ -449,54 +491,110 @@ function App() {
   return (
     <div className="app-shell">
       <main className="app-content">
-        {activeTab === "budget" && renderBudget()}
-        {activeTab === "transactions" && renderTransactions()}
-        {activeTab === "settings" && renderSettings()}
+        {activeTab === "budget" &&
+          renderBudget()}
+
+        {activeTab === "transactions" &&
+          renderTransactions()}
+
+        {activeTab === "settings" &&
+          renderSettings()}
       </main>
 
-      <button className="floating-add" onClick={() => setShowAdd(true)}>
+      {/* ADD BUTTON */}
+
+      <button
+        className="floating-add"
+        onClick={() => setShowAdd(true)}
+      >
         <span>+</span>
         Add
       </button>
 
+      {/* NAVIGATION */}
+
       <nav className="bottom-nav">
         <button
-          className={activeTab === "budget" ? "active" : ""}
-          onClick={() => setActiveTab("budget")}
+          className={
+            activeTab === "budget"
+              ? "active"
+              : ""
+          }
+          onClick={() =>
+            setActiveTab("budget")
+          }
         >
-          <span className="nav-icon">⌂</span>
+          <span className="nav-icon">
+            ⌂
+          </span>
+
           <span>Budget</span>
         </button>
 
         <button
-          className={activeTab === "transactions" ? "active" : ""}
-          onClick={() => setActiveTab("transactions")}
+          className={
+            activeTab === "transactions"
+              ? "active"
+              : ""
+          }
+          onClick={() =>
+            setActiveTab("transactions")
+          }
         >
-          <span className="nav-icon">☷</span>
+          <span className="nav-icon">
+            ☷
+          </span>
+
           <span>Transactions</span>
         </button>
 
         <button
-          className={activeTab === "settings" ? "active" : ""}
-          onClick={() => setActiveTab("settings")}
+          className={
+            activeTab === "settings"
+              ? "active"
+              : ""
+          }
+          onClick={() =>
+            setActiveTab("settings")
+          }
         >
-          <span className="nav-icon">⚙</span>
+          <span className="nav-icon">
+            ⚙
+          </span>
+
           <span>Settings</span>
         </button>
       </nav>
 
+      {/* ADD TRANSACTION MODAL */}
+
       {showAdd && (
-        <div className="modal-backdrop" onClick={() => setShowAdd(false)}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
+        <div
+          className="modal-backdrop"
+          onClick={() =>
+            setShowAdd(false)
+          }
+        >
+          <div
+            className="modal"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
             <div className="modal-header">
               <div>
-                <span className="eyebrow">NEW ENTRY</span>
+                <span className="eyebrow">
+                  NEW ENTRY
+                </span>
+
                 <h2>Add transaction</h2>
               </div>
 
               <button
                 className="close-button"
-                onClick={() => setShowAdd(false)}
+                onClick={() =>
+                  setShowAdd(false)
+                }
               >
                 ×
               </button>
@@ -504,23 +602,39 @@ function App() {
 
             <div className="type-selector">
               <button
-                className={type === "expense" ? "selected expense" : ""}
-                onClick={() => setType("expense")}
+                className={
+                  type === "expense"
+                    ? "selected expense"
+                    : ""
+                }
+                onClick={() =>
+                  setType("expense")
+                }
               >
                 Expense
               </button>
 
               <button
-                className={type === "income" ? "selected income" : ""}
-                onClick={() => setType("income")}
+                className={
+                  type === "income"
+                    ? "selected income"
+                    : ""
+                }
+                onClick={() =>
+                  setType("income")
+                }
               >
                 Income
               </button>
             </div>
 
-            <form onSubmit={addTransaction} className="transaction-form">
+            <form
+              onSubmit={addTransaction}
+              className="transaction-form"
+            >
               <label>
                 Description
+
                 <input
                   autoFocus
                   type="text"
@@ -530,14 +644,20 @@ function App() {
                       : "e.g. Groceries"
                   }
                   value={name}
-                  onChange={(event) => setName(event.target.value)}
+                  onChange={(event) =>
+                    setName(
+                      event.target.value
+                    )
+                  }
                 />
               </label>
 
               <label>
                 Amount
+
                 <div className="amount-input">
                   <span>$</span>
+
                   <input
                     type="number"
                     inputMode="decimal"
@@ -545,7 +665,11 @@ function App() {
                     min="0"
                     placeholder="0.00"
                     value={amount}
-                    onChange={(event) => setAmount(event.target.value)}
+                    onChange={(event) =>
+                      setAmount(
+                        event.target.value
+                      )
+                    }
                   />
                 </div>
               </label>
@@ -553,20 +677,33 @@ function App() {
               {type === "expense" && (
                 <label>
                   Category
+
                   <select
                     value={category}
-                    onChange={(event) => setCategory(event.target.value)}
+                    onChange={(event) =>
+                      setCategory(
+                        event.target.value
+                      )
+                    }
                   >
-                    {categories.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
+                    {categories.map(
+                      (item) => (
+                        <option
+                          key={item}
+                          value={item}
+                        >
+                          {item}
+                        </option>
+                      )
+                    )}
                   </select>
                 </label>
               )}
 
-              <button className="submit-button" type="submit">
+              <button
+                className="submit-button"
+                type="submit"
+              >
                 Add transaction
               </button>
             </form>
@@ -574,42 +711,110 @@ function App() {
         </div>
       )}
 
+      {/* BUDGET EDITOR */}
+
       {showBudgetEditor && (
         <div
           className="modal-backdrop"
-          onClick={() => setShowBudgetEditor(false)}
+          onClick={() =>
+            setShowBudgetEditor(false)
+          }
         >
           <div
             className="modal budget-modal"
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) =>
+              event.stopPropagation()
+            }
           >
             <div className="modal-header">
               <div>
-                <span className="eyebrow">OCTOBER 2026</span>
-                <h2>Budget limits</h2>
+                <span className="eyebrow">
+                  OCTOBER 2026
+                </span>
+
+                <h2>
+                  Set your budget
+                </h2>
               </div>
 
               <button
                 className="close-button"
-                onClick={() => setShowBudgetEditor(false)}
+                onClick={() =>
+                  setShowBudgetEditor(false)
+                }
               >
                 ×
               </button>
+            </div>
+
+            <p className="modal-description">
+              Enter the maximum amount you
+              plan to spend in each category
+              this month.
+            </p>
+
+            <div className="budget-total-preview">
+              <div>
+                <span>Monthly income</span>
+
+                <strong>
+                  {formatCurrency(income)}
+                </strong>
+              </div>
+
+              <div>
+                <span>Total budget</span>
+
+                <strong>
+                  {formatCurrency(
+                    totalBudget
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  {unallocated >= 0
+                    ? "Unallocated"
+                    : "Over income"}
+                </span>
+
+                <strong
+                  className={
+                    unallocated < 0
+                      ? "expense-text"
+                      : ""
+                  }
+                >
+                  {formatCurrency(
+                    Math.abs(
+                      unallocated
+                    )
+                  )}
+                </strong>
+              </div>
             </div>
 
             <div className="budget-editor">
               {categories.map((item) => (
                 <label key={item}>
                   <span>{item}</span>
+
                   <div className="budget-input">
                     <span>$</span>
+
                     <input
                       type="number"
                       min="0"
                       step="10"
-                      value={budgets[item]}
+                      value={
+                        budgets[item]
+                      }
                       onChange={(event) =>
-                        updateBudget(item, event.target.value)
+                        updateBudget(
+                          item,
+                          event.target.value
+                        )
                       }
                     />
                   </div>
@@ -619,7 +824,9 @@ function App() {
 
             <button
               className="submit-button"
-              onClick={() => setShowBudgetEditor(false)}
+              onClick={() =>
+                setShowBudgetEditor(false)
+              }
             >
               Save budget
             </button>
@@ -630,56 +837,97 @@ function App() {
   );
 }
 
-function TransactionList({ transactions, onDelete }) {
+function TransactionList({
+  transactions,
+  onDelete,
+}) {
   if (transactions.length === 0) {
     return (
       <div className="empty-state">
-        <div className="empty-icon">☷</div>
-        <strong>No transactions yet</strong>
-        <p>Add your first transaction using the + button.</p>
+        <div className="empty-icon">
+          ☷
+        </div>
+
+        <strong>
+          No transactions yet
+        </strong>
+
+        <p>
+          Add your first transaction
+          using the + button.
+        </p>
       </div>
     );
   }
 
   return (
     <div className="transaction-list">
-      {transactions.map((transaction) => (
-        <article className="transaction-row" key={transaction.id}>
-          <div
-            className={`transaction-icon ${
-              transaction.type === "income" ? "income-icon" : ""
-            }`}
+      {transactions.map(
+        (transaction) => (
+          <article
+            className="transaction-row"
+            key={transaction.id}
           >
-            {transaction.type === "income"
-              ? "↑"
-              : categoryIcons[transaction.category] || "•••"}
-          </div>
-
-          <div className="transaction-details">
-            <strong>{transaction.name}</strong>
-            <span>
-              {transaction.category} · {formatDate(transaction.date)}
-            </span>
-          </div>
-
-          <div className="transaction-amount">
-            <strong
-              className={
-                transaction.type === "income"
-                  ? "income-text"
-                  : "expense-text"
-              }
+            <div
+              className={`transaction-icon ${transaction.type ===
+                "income"
+                ? "income-icon"
+                : ""
+                }`}
             >
-              {transaction.type === "income" ? "+" : "−"}
-              {formatCurrency(transaction.amount)}
-            </strong>
+              {transaction.type ===
+                "income"
+                ? "↑"
+                : categoryIcons[
+                transaction.category
+                ] || "•••"}
+            </div>
 
-            <button onClick={() => onDelete(transaction.id)}>
-              Delete
-            </button>
-          </div>
-        </article>
-      ))}
+            <div className="transaction-details">
+              <strong>
+                {transaction.name}
+              </strong>
+
+              <span>
+                {transaction.category} ·{" "}
+                {formatDate(
+                  transaction.date
+                )}
+              </span>
+            </div>
+
+            <div className="transaction-amount">
+              <strong
+                className={
+                  transaction.type ===
+                    "income"
+                    ? "income-text"
+                    : "expense-text"
+                }
+              >
+                {transaction.type ===
+                  "income"
+                  ? "+"
+                  : "−"}
+
+                {formatCurrency(
+                  transaction.amount
+                )}
+              </strong>
+
+              <button
+                onClick={() =>
+                  onDelete(
+                    transaction.id
+                  )
+                }
+              >
+                Delete
+              </button>
+            </div>
+          </article>
+        )
+      )}
     </div>
   );
 }
