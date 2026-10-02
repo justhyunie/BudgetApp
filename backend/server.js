@@ -159,7 +159,7 @@ app.post("/api/transactions", async (req, res) => {
       });
     }
 
-    if (!numericAmount || numericAmount <= 0) {
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       return res.status(400).json({
         error: "Amount must be greater than zero",
       });
@@ -203,14 +203,17 @@ app.post("/api/transactions", async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error("POST /api/transactions:", error);
+    console.error(
+      "POST /api/transactions:",
+      error,
+    );
 
     res.status(500).json({
       error: "Failed to create transaction",
+      details: error.message,
     });
   }
 });
-
 app.patch("/api/transactions/:id", async (req, res) => {
   try {
     const id = parseId(req.params.id);
