@@ -1,4 +1,5 @@
 import { useState } from "react";
+
 import { api } from "../../utils/api";
 
 function parseCsvLine(line) {
@@ -10,19 +11,13 @@ function parseCsvLine(line) {
     const character = line[i];
 
     if (character === '"') {
-      if (
-        insideQuotes &&
-        line[i + 1] === '"'
-      ) {
+      if (insideQuotes && line[i + 1] === '"') {
         current += '"';
         i += 1;
       } else {
         insideQuotes = !insideQuotes;
       }
-    } else if (
-      character === "," &&
-      !insideQuotes
-    ) {
+    } else if (character === "," && !insideQuotes) {
       values.push(current.trim());
       current = "";
     } else {
@@ -31,7 +26,6 @@ function parseCsvLine(line) {
   }
 
   values.push(current.trim());
-
   return values;
 }
 
@@ -50,11 +44,16 @@ function parseCsvDate(value) {
 function parseCsvAmount(value) {
   if (!value) return 0;
 
-  const cleaned = String(value)
-    .replace(/[$,\s]/g, "")
-    .replace(/^\((.*)\)$/, "-$1");
+  const stringValue = String(value).trim();
+  const isNegative = /^\(.*\)$/.test(stringValue);
 
-  return Number(cleaned) || 0;
+  const cleaned = stringValue
+    .replace(/[$,\s]/g, "")
+    .replace(/[()]/g, "");
+
+  const amount = Number(cleaned) || 0;
+
+  return isNegative ? -amount : amount;
 }
 
 function parseTransactionsCsv(text) {
@@ -66,15 +65,12 @@ function parseTransactionsCsv(text) {
     return [];
   }
 
-  const headers = parseCsvLine(
-    lines[0],
-  ).map((header) =>
+  const headers = parseCsvLine(lines[0]).map((header) =>
     header.toLowerCase().trim(),
   );
 
   return lines.slice(1).map((line) => {
     const values = parseCsvLine(line);
-
     const row = {};
 
     headers.forEach((header, index) => {
@@ -110,13 +106,10 @@ function parseTransactionsCsv(text) {
       row.transaction_type ||
       "";
 
-    type = type.toLowerCase();
+    type = type.toLowerCase().trim();
 
     if (!type) {
-      type =
-        amount >= 0
-          ? "income"
-          : "expense";
+      type = amount >= 0 ? "income" : "expense";
     }
 
     return {
@@ -124,10 +117,7 @@ function parseTransactionsCsv(text) {
       description,
       amount: Math.abs(amount),
       category,
-      type:
-        type === "income"
-          ? "income"
-          : "expense",
+      type: type === "income" ? "income" : "expense",
     };
   });
 }
@@ -139,12 +129,10 @@ export default function CsvImportModal({
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState([]);
   const [error, setError] = useState("");
-  const [importing, setImporting] =
-    useState(false);
+  const [importing, setImporting] = useState(false);
 
   async function handleFileChange(event) {
-    const selectedFile =
-      event.target.files?.[0];
+    const selectedFile = event.target.files?.[0];
 
     if (!selectedFile) return;
 
@@ -152,27 +140,20 @@ export default function CsvImportModal({
     setError("");
 
     try {
-      const text =
-        await selectedFile.text();
-
-      const rows =
-        parseTransactionsCsv(text);
+      const text = await selectedFile.text();
+      const rows = parseTransactionsCsv(text);
 
       setPreview(rows);
     } catch (error) {
       console.error(error);
-      setError(
-        "Unable to read this CSV file.",
-      );
+      setError("Unable to read this CSV file.");
       setPreview([]);
     }
   }
 
   async function handleImport() {
     if (!preview.length) {
-      setError(
-        "There are no transactions to import.",
-      );
+      setError("There are no transactions to import.");
       return;
     }
 
@@ -183,15 +164,10 @@ export default function CsvImportModal({
       const imported = [];
 
       for (const transaction of preview) {
-        const saved = await api(
-          "/api/transactions",
-          {
-            method: "POST",
-            body: JSON.stringify(
-              transaction,
-            ),
-          },
-        );
+        const saved = await api("/api/transactions", {
+          method: "POST",
+          body: JSON.stringify(transaction),
+        });
 
         imported.push(saved);
       }
@@ -199,7 +175,6 @@ export default function CsvImportModal({
       onImported(imported);
     } catch (error) {
       console.error(error);
-
       setError(
         error.message ||
           "Failed to import transactions.",
@@ -225,7 +200,6 @@ export default function CsvImportModal({
             <div className="section-kicker">
               Transactions
             </div>
-
             <h2>Import CSV</h2>
           </div>
 
@@ -249,62 +223,125 @@ export default function CsvImportModal({
             />
           </label>
 
+          <div className="csv-instructions">
+            <div className="section-kicker">
+              CSV Format
+            </div>
+
+            <p>
+              Your CSV should include a header row.
+              The importer recognizes the following
+              columns:
+            </p>
+
+            <div className="csv-instructions-list">
+              <div>
+                <strong>date</strong>
+                <span>
+                  Transaction date
+                </span>
+              </div>
+
+              <div>
+                <strong>description</strong>
+                <span>
+                  Transaction description, name,
+                  memo, or payee
+                </span>
+              </div>
+
+              <div>
+                <strong>amount</strong>
+                <span>
+                  Transaction amount
+                </span>
+              </div>
+
+              <div>
+                <strong>category</strong>
+                <span>
+                  Spending category
+                </span>
+              </div>
+
+              <div>
+                <strong>type</strong>
+                <span>
+                  income or expense
+                </span>
+              </div>
+            </div>
+
+            <div className="csv-example">
+              <strong>Example:</strong>
+
+              <code>
+                date,description,amount,category,type
+                <br />
+                2026-10-01,Paycheck,2064.00,Income,income
+                <br />
+                2026-10-01,Rent,1150.00,Housing,expense
+              </code>
+            </div>
+
+            <p className="muted-text">
+              If <strong>type</strong> is omitted,
+              positive amounts are treated as income
+              and negative amounts are treated as
+              expenses. Dollar signs, commas, and
+              parentheses are supported.
+            </p>
+          </div>
+
+          {file && (
+            <div className="muted-text">
+              Selected file: {file.name}
+            </div>
+          )}
+
           {preview.length > 0 && (
             <div className="csv-preview">
               <div className="csv-preview-header">
-                <strong>
-                  Preview
-                </strong>
+                <strong>Preview</strong>
 
                 <span>
                   {preview.length} transaction
-                  {preview.length === 1
-                    ? ""
-                    : "s"}
+                  {preview.length === 1 ? "" : "s"}
                 </span>
               </div>
 
               <div className="csv-preview-list">
-                {preview
-                  .slice(0, 10)
-                  .map(
-                    (
-                      transaction,
-                      index,
-                    ) => (
-                      <div
-                        className="csv-preview-row"
-                        key={index}
-                      >
-                        <span>
-                          {transaction.date}
-                        </span>
+                {preview.slice(0, 10).map(
+                  (transaction, index) => (
+                    <div
+                      className="csv-preview-row"
+                      key={index}
+                    >
+                      <span>
+                        {transaction.date}
+                      </span>
 
-                        <strong>
-                          {
-                            transaction.description
-                          }
-                        </strong>
+                      <strong>
+                        {transaction.description}
+                      </strong>
 
-                        <span>
-                          {
-                            transaction.category
-                          }
-                        </span>
+                      <span>
+                        {transaction.category}
+                      </span>
 
-                        <span>
-                          {transaction.type ===
-                          "income"
-                            ? "+"
-                            : "-"}
-                          $
-                          {Number(
-                            transaction.amount,
-                          ).toFixed(2)}
-                        </span>
-                      </div>
-                    ),
-                  )}
+                      <span>
+                        {transaction.type ===
+                        "income"
+                          ? "+"
+                          : "-"}
+                        $
+                        {Number(
+                          transaction.amount,
+                        ).toFixed(2)}
+                      </span>
+                    </div>
+                  ),
+                )}
               </div>
 
               {preview.length > 10 && (
@@ -343,7 +380,9 @@ export default function CsvImportModal({
             >
               {importing
                 ? "Importing..."
-                : `Import ${preview.length || ""} Transactions`}
+                : `Import ${
+                    preview.length || ""
+                  } Transactions`}
             </button>
           </div>
         </div>
