@@ -3934,3 +3934,68 @@ select:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+.csv-instructions {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.csv-instructions p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.csv-instructions-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.csv-instructions-list div {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.csv-instructions-list strong {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.csv-instructions-list span {
+  color: var(--muted);
+}
+
+.csv-example {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface);
+  overflow-x: auto;
+}
+
+.csv-example strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.csv-example code {
+  color: var(--muted);
+  font-family: monospace;
+  font-size: 10px;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .csv-instructions-list div {
+    grid-template-columns: 100px 1fr;
+  }
+}
