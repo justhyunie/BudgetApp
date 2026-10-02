@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useState } from "react";
+import Tooltip from "@mui/material/Tooltip";
 import "./App.css";
 
 const PIN = "3517";
@@ -135,6 +136,191 @@ async function api(path, options = {}) {
   }
 
   return data;
+}
+
+/* -------------------------------------------------------
+   CSV IMPORT HELPERS
+------------------------------------------------------- */
+
+function parseCsvLine(line) {
+  const values = [];
+  let value = "";
+  let quoted = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+
+    if (character === '"') {
+      if (quoted && line[index + 1] === '"') {
+        value += '"';
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (character === "," && !quoted) {
+      values.push(value.trim());
+      value = "";
+    } else {
+      value += character;
+    }
+  }
+
+  values.push(value.trim());
+  return values;
+}
+
+function parseCsvDate(value) {
+  const trimmed = String(value || "").trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const date = new Date(`${trimmed}T00:00:00`);
+
+    if (
+      !Number.isNaN(date.getTime()) &&
+      date.getFullYear() === Number(trimmed.slice(0, 4)) &&
+      date.getMonth() + 1 === Number(trimmed.slice(5, 7)) &&
+      date.getDate() === Number(trimmed.slice(8, 10))
+    ) {
+      return trimmed;
+    }
+
+    return "";
+  }
+
+  const match = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+
+  if (!match) {
+    return "";
+  }
+
+  const [, month, day, year] = match;
+  const normalizedMonth = month.padStart(2, "0");
+  const normalizedDay = day.padStart(2, "0");
+  const result = `${year}-${normalizedMonth}-${normalizedDay}`;
+  const date = new Date(`${result}T00:00:00`);
+
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== Number(year) ||
+    date.getMonth() + 1 !== Number(normalizedMonth) ||
+    date.getDate() !== Number(normalizedDay)
+  ) {
+    return "";
+  }
+
+  return result;
+}
+
+function parseCsvAmount(value) {
+  const trimmed = String(value || "")
+    .trim()
+    .replace(/[$,]/g, "");
+
+  if (!trimmed) {
+    return NaN;
+  }
+
+  const normalized =
+    trimmed.startsWith("(") && trimmed.endsWith(")")
+      ? `-${trimmed.slice(1, -1)}`
+      : trimmed;
+
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? amount : NaN;
+}
+
+function parseTransactionsCsv(text) {
+  const lines = String(text || "")
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0);
+
+  if (lines.length < 2) {
+    throw new Error(
+      "The CSV must contain a header row and at least one transaction."
+    );
+  }
+
+  const headers = parseCsvLine(lines[0]).map((header) =>
+    header
+      .replace(/^\uFEFF/, "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+  );
+
+  const requiredHeaders = [
+    "date",
+    "description",
+    "amount",
+    "category"
+  ];
+
+  const missingHeaders = requiredHeaders.filter(
+    (header) => !headers.includes(header)
+  );
+
+  if (missingHeaders.length) {
+    throw new Error(
+      `Missing required column${
+        missingHeaders.length > 1 ? "s" : ""
+      }: ${missingHeaders.join(", ")}`
+    );
+  }
+
+  const columnIndex = Object.fromEntries(
+    requiredHeaders.map((header) => [
+      header,
+      headers.indexOf(header)
+    ])
+  );
+
+  const rows = [];
+  const errors = [];
+
+  lines.slice(1).forEach((line, index) => {
+    const rowNumber = index + 2;
+    const values = parseCsvLine(line);
+
+    const date = parseCsvDate(
+      values[columnIndex.date]
+    );
+
+    const description = String(
+      values[columnIndex.description] || ""
+    ).trim();
+
+    const amount = parseCsvAmount(
+      values[columnIndex.amount]
+    );
+
+    const category = String(
+      values[columnIndex.category] || ""
+    ).trim();
+
+    const rowErrors = [];
+
+    if (!date) rowErrors.push("invalid date");
+    if (!description) rowErrors.push("missing description");
+    if (!Number.isFinite(amount)) rowErrors.push("invalid amount");
+    if (!category) rowErrors.push("missing category");
+
+    if (rowErrors.length) {
+      errors.push(
+        `Row ${rowNumber}: ${rowErrors.join(", ")}.`
+      );
+      return;
+    }
+
+    rows.push({
+      date,
+      description: description.slice(0, 200),
+      amount,
+      category: category.slice(0, 100)
+    });
+  });
+
+  return { rows, errors };
 }
 
 /* -------------------------------------------------------
@@ -288,6 +474,9 @@ export default function App() {
             openTransactionModal={() =>
               setModal({ type: "transaction" })
             }
+            openCsvImportModal={() =>
+              setModal({ type: "csv-import" })
+            }
             transactionError={transactionError}
           />
         )}
@@ -344,6 +533,19 @@ export default function App() {
           close={() => setModal(null)}
           onSaved={(budget) => {
             setBudgets((current) => [...current, budget]);
+            setModal(null);
+          }}
+        />
+      )}
+
+      {modal?.type === "csv-import" && (
+        <CsvImportModal
+          close={() => setModal(null)}
+          onImported={(importedTransactions) => {
+            setTransactions((current) => [
+              ...importedTransactions,
+              ...current
+            ]);
             setModal(null);
           }}
         />
@@ -745,6 +947,7 @@ function TransactionsPage({
   setTransactions,
   setTransactionError,
   openTransactionModal,
+  openCsvImportModal,
   transactionError
 }) {
   const monthTransactions = transactions.filter(
@@ -789,6 +992,13 @@ function TransactionsPage({
             selectedMonth={selectedMonth}
             setSelectedMonth={setSelectedMonth}
           />
+
+          <button
+            className="secondary-button"
+            onClick={openCsvImportModal}
+          >
+            Import CSV
+          </button>
 
           <button
             className="primary-button"
@@ -863,20 +1073,26 @@ function TransactionList({
               </span>
             </div>
 
-            <div className="transaction-amount">
+            <div
+              className={`transaction-amount ${
+                amount > 0 ? "income" : ""
+              }`}
+            >
               {money(amount)}
             </div>
 
             {onDelete && (
-              <button
-                className="delete-button"
-                onClick={() =>
-                  onDelete(transaction.id)
-                }
-                title="Delete transaction"
-              >
-                ×
-              </button>
+              <Tooltip title="Delete transaction" arrow>
+                <button
+                  className="delete-button"
+                  onClick={() =>
+                    onDelete(transaction.id)
+                  }
+                  aria-label={`Delete ${transaction.description}`}
+                >
+                  ×
+                </button>
+              </Tooltip>
             )}
           </div>
         );
@@ -1663,6 +1879,209 @@ function TransactionModal({
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+/* -------------------------------------------------------
+   CSV IMPORT MODAL
+------------------------------------------------------- */
+
+function CsvImportModal({ close, onImported }) {
+  const [fileName, setFileName] = useState("");
+  const [rows, setRows] = useState([]);
+  const [errors, setErrors] = useState([]);
+  const [error, setError] = useState("");
+  const [importing, setImporting] = useState(false);
+
+  async function handleFile(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setFileName(file.name);
+    setRows([]);
+    setErrors([]);
+    setError("");
+
+    try {
+      const text = await file.text();
+      const parsed = parseTransactionsCsv(text);
+
+      setRows(parsed.rows);
+      setErrors(parsed.errors);
+
+      if (!parsed.rows.length && parsed.errors.length) {
+        setError(
+          "No valid transactions were found in the CSV."
+        );
+      }
+    } catch (parseError) {
+      setError(
+        parseError.message ||
+          "Could not read the CSV file."
+      );
+    }
+  }
+
+  async function importTransactions() {
+    if (
+      !rows.length ||
+      errors.length ||
+      importing
+    ) {
+      return;
+    }
+
+    setImporting(true);
+    setError("");
+
+    const imported = [];
+
+    try {
+      for (const row of rows) {
+        const transaction = await api(
+          "/api/transactions",
+          {
+            method: "POST",
+            body: JSON.stringify(row)
+          }
+        );
+
+        imported.push(transaction);
+      }
+
+      onImported(imported);
+    } catch (importError) {
+      setError(
+        imported.length
+          ? `Imported ${imported.length} transaction${
+              imported.length === 1 ? "" : "s"
+            } before the import stopped. ${
+              importError.message
+            }`
+          : importError.message
+      );
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  return (
+    <Modal
+      title="Import Transactions"
+      close={close}
+    >
+      <div className="modal-form">
+        <div className="csv-upload">
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleFile}
+            disabled={importing}
+          />
+
+          <p>
+            Required columns: date, description, amount,
+            category. Amounts may be positive for income or
+            negative for expenses.
+          </p>
+        </div>
+
+        {fileName && (
+          <div className="csv-preview-header">
+            <strong>{fileName}</strong>
+
+            <span>
+              {rows.length} valid row
+              {rows.length === 1 ? "" : "s"}
+            </span>
+          </div>
+        )}
+
+        {rows.length > 0 && (
+          <div className="csv-preview">
+            {rows.slice(0, 8).map((row, index) => (
+              <div
+                className="csv-preview-row"
+                key={`${row.date}-${row.description}-${index}`}
+              >
+                <span>{formatDate(row.date)}</span>
+
+                <strong>{row.description}</strong>
+
+                <span>{money(row.amount)}</span>
+              </div>
+            ))}
+
+            {rows.length > 8 && (
+              <div className="csv-more">
+                + {rows.length - 8} more row
+                {rows.length - 8 === 1 ? "" : "s"}
+              </div>
+            )}
+          </div>
+        )}
+
+        {errors.length > 0 && (
+          <div className="form-error">
+            <strong>
+              {errors.length} row
+              {errors.length === 1 ? "" : "s"} need
+              attention.
+            </strong>
+
+            <div style={{ marginTop: 6 }}>
+              {errors.slice(0, 5).map((message) => (
+                <div key={message}>{message}</div>
+              ))}
+
+              {errors.length > 5 && (
+                <div style={{ marginTop: 4 }}>
+                  + {errors.length - 5} more error
+                  {errors.length - 5 === 1 ? "" : "s"}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="form-error">
+            {error}
+          </div>
+        )}
+
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={close}
+            disabled={importing}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            className="primary-button"
+            onClick={importTransactions}
+            disabled={
+              !rows.length ||
+              errors.length > 0 ||
+              importing
+            }
+          >
+            {importing
+              ? "Importing..."
+              : `Import ${rows.length || ""} Transaction${
+                  rows.length === 1 ? "" : "s"
+                }`.trim()}
+          </button>
+        </div>
+      </div>
     </Modal>
   );
 }
