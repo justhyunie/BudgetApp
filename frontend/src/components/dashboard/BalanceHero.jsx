@@ -1,35 +1,42 @@
+import { money } from "../../utils/formatting";
+
 export default function BalanceHero({
-  net,
-  income,
-  expenses,
+  income = 0,
+  expenses = 0,
+  net = 0,
 }) {
+  const netClass = net >= 0 ? "positive" : "negative";
+
   return (
     <section className="balance-hero">
       <div>
-        <span className="section-kicker">
-          Monthly Balance
-        </span>
+        <div className="eyebrow">
+          Net Position
+        </div>
 
-        <strong>
-          {net >= 0 ? "+" : "-"}$
-          {Math.abs(net).toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </strong>
+        <div className={`hero-number ${netClass}`}>
+          {money(net)}
+        </div>
 
-        <p>
-          {income.toLocaleString("en-US", {
-            style: "currency",
-            currency: "USD",
-          })}{" "}
-          income ·{" "}
-          {expenses.toLocaleString("en-US", {
-            style: "currency",
-            currency: "USD",
-          })}{" "}
-          expenses
+        <p className="hero-caption">
+          Income minus expenses
         </p>
+      </div>
+
+      <div className="hero-side">
+        <div>
+          <span>Income</span>
+          <strong className="positive">
+            {money(income)}
+          </strong>
+        </div>
+
+        <div>
+          <span>Expenses</span>
+          <strong className="negative">
+            {money(expenses)}
+          </strong>
+        </div>
       </div>
     </section>
   );

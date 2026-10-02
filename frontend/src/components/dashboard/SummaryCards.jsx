@@ -1,38 +1,42 @@
+
 import { money } from "../../utils/formatting";
 
 export default function SummaryCards({
-  income,
-  expenses,
-  budget,
+  income = 0,
+  expenses = 0,
+  net = 0,
 }) {
-  const cards = [
-    {
-      label: "Income",
-      value: money(income),
-      className: "amount-positive",
-    },
-    {
-      label: "Expenses",
-      value: money(expenses),
-      className: "amount-negative",
-    },
-    {
-      label: "Budget",
-      value: money(budget),
-      className: "",
-    },
-  ];
-
   return (
     <section className="summary-grid">
-      {cards.map((card) => (
-        <div className="summary-card" key={card.label}>
-          <span>{card.label}</span>
-          <strong className={card.className}>
-            {card.value}
-          </strong>
-        </div>
-      ))}
+      <div className="summary-card">
+        <span className="summary-label">
+          Income
+        </span>
+
+        <strong className="summary-value">
+          {money(income)}
+        </strong>
+      </div>
+
+      <div className="summary-card">
+        <span className="summary-label">
+          Expenses
+        </span>
+
+        <strong className="summary-value">
+          {money(expenses)}
+        </strong>
+      </div>
+
+      <div className="summary-card">
+        <span className="summary-label">
+          Net
+        </span>
+
+        <strong className="summary-value">
+          {money(net)}
+        </strong>
+      </div>
     </section>
   );
 }

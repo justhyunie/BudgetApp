@@ -1,3 +1,4 @@
+
 import { useMemo } from "react";
 
 import MonthNavigator from "../components/ui/MonthNavigator";
@@ -6,95 +7,58 @@ import SummaryCards from "../components/dashboard/SummaryCards";
 import CategorySpending from "../components/dashboard/CategorySpending";
 import Transactions from "../components/dashboard/Transactions";
 
-import {
-  isIncome,
-  isExpense,
-  transactionAmount,
-} from "../utils/transactions";
+export default function Dashboard({ transactions = [], budgets = [], selectedMonth, setSelectedMonth, setActivePage, openTransactionModal, }) { console.log("🔥 NEW DASHBOARD FILE IS RUNNING"); console.log("SELECTED MONTH:", selectedMonth); console.log("ALL TRANSACTIONS:", transactions); const monthTransactions = useMemo(() => { return transactions.filter((transaction) => { const date = String(transaction.date || ""); return date.substring(0, 7) === selectedMonth; }); }, [transactions, selectedMonth]); console.log( "MONTH TRANSACTIONS:", monthTransactions, ); const income = monthTransactions.reduce( (total, transaction) => { const type = String( transaction.type || "", ) .trim() .toLowerCase(); const amount = Math.abs(Number(transaction.amount)) || 0; console.log( "TRANSACTION:", transaction.description, "TYPE:", type, "AMOUNT:", amount, ); if (type === "income") { return total + amount; } return total; }, 0, ); const expenses = monthTransactions.reduce( (total, transaction) => { const type = String( transaction.type || "", ) .trim() .toLowerCase(); const amount = Math.abs(Number(transaction.amount)) || 0; if (type === "expense") { return total + amount; } return total; }, 0, ); const net = income - expenses; console.log("CALCULATED INCOME:", income); console.log("CALCULATED EXPENSES:", expenses); console.log("CALCULATED NET:", net);
+  /*
+   * Spending by category
+   */
+  const categorySpending =
+    monthTransactions.reduce(
+      (totals, transaction) => {
+        const type = String(
+          transaction.type || "",
+        )
+          .trim()
+          .toLowerCase();
 
-import { monthKey } from "../utils/formatting";
+        if (type !== "expense") {
+          return totals;
+        }
 
-export default function Dashboard({
-  transactions,
-  budgets,
-  selectedMonth,
-  setSelectedMonth,
-  setActivePage,
-  openTransactionModal,
-}) {
-  const monthTransactions = useMemo(() => {
-    return transactions
-      .filter(
-        (transaction) =>
-          monthKey(transaction.date) ===
-          selectedMonth,
-      )
-      .sort(
-        (a, b) =>
-          new Date(b.date) -
-          new Date(a.date),
-      );
-  }, [transactions, selectedMonth]);
-
-  const income = useMemo(() => {
-    return monthTransactions
-      .filter(isIncome)
-      .reduce(
-        (sum, transaction) =>
-          sum + transactionAmount(transaction),
-        0,
-      );
-  }, [monthTransactions]);
-
-  const expenses = useMemo(() => {
-    return monthTransactions
-      .filter(isExpense)
-      .reduce(
-        (sum, transaction) =>
-          sum + transactionAmount(transaction),
-        0,
-      );
-  }, [monthTransactions]);
-
-  const net = income - expenses;
-
-  const categorySpending = useMemo(() => {
-    return monthTransactions
-      .filter(isExpense)
-      .reduce((totals, transaction) => {
         const category =
           transaction.category || "Other";
 
+        const amount =
+          Math.abs(Number(transaction.amount)) || 0;
+
         totals[category] =
-          (totals[category] || 0) +
-          transactionAmount(transaction);
+          (totals[category] || 0) + amount;
 
         return totals;
-      }, {});
-  }, [monthTransactions]);
+      },
+      {},
+    );
 
-  const budgetSpending = useMemo(() => {
-    return budgets.map((budget) => {
-      const spent =
-        categorySpending[budget.category] || 0;
+  /*
+   * Budget information
+   */
+  const budgetSpending = budgets.map((budget) => {
+    const limit =
+      Number(budget.amount) || 0;
 
-      const limit =
-        Number(budget.amount) || 0;
+    const spent =
+      categorySpending[budget.category] || 0;
 
-      return {
-        ...budget,
-        spent,
-        remaining: limit - spent,
-        percentage:
-          limit > 0
-            ? Math.min(
-                (spent / limit) * 100,
-                100,
-              )
-            : 0,
-      };
-    });
-  }, [budgets, categorySpending]);
+    return {
+      ...budget,
+      amount: limit,
+      spent,
+      remaining: limit - spent,
+      percentage:
+        limit > 0
+          ? (spent / limit) * 100
+          : 0,
+    };
+  });
 
   const recentTransactions =
     monthTransactions.slice(0, 6);
@@ -157,3 +121,4 @@ export default function Dashboard({
     </div>
   );
 }
+

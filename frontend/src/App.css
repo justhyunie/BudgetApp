@@ -619,6 +619,21 @@ select:focus-visible {
   border-radius: 50%;
 }
 
+.hero-number.positive {
+  color: #7fc9a5;
+}
+
+.hero-number.negative {
+  color: #e27a75;
+}
+
+.hero-side strong.positive {
+  color: #7fc9a5;
+}
+
+.hero-side strong.negative {
+  color: #e27a75;
+}
 .eyebrow {
   color: #a8aea9;
 
