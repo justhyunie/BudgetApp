@@ -12,9 +12,10 @@ export default function TransactionList({
   setError,
 }) {
   async function deleteTransaction(id) {
-    if (!window.confirm("Delete this transaction?")) {
+   /*  if (!window.confirm("Delete this transaction?")) {
       return;
-    }
+    } */
+  
 
     try {
       await api(`/api/transactions/${id}`, {

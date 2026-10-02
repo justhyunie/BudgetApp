@@ -9,7 +9,7 @@ export default function CategorySpending({
 
   const safeSpending =
     categorySpending &&
-    typeof categorySpending === "object"
+      typeof categorySpending === "object"
       ? categorySpending
       : {};
 
@@ -90,15 +90,13 @@ export default function CategorySpending({
 
             return (
               <div
-                className={`category-row ${
-                  !hasBudget
-                    ? "category-row-no-budget"
-                    : ""
-                } ${
-                  isOverBudget
+                className={`category-row ${!hasBudget
+                  ? "category-row-no-budget"
+                  : ""
+                  } ${isOverBudget
                     ? "category-row-over-budget"
                     : ""
-                }`}
+                  }`}
                 key={category}
               >
                 <div className="category-icon">
@@ -111,11 +109,10 @@ export default function CategorySpending({
                   {hasBudget ? (
                     <div className="category-progress">
                       <div
-                        className={`category-progress-fill ${
-                          isOverBudget
-                            ? "over-budget"
-                            : ""
-                        }`}
+                        className={`category-progress-fill ${isOverBudget
+                          ? "over-budget"
+                          : ""
+                          }`}
                         style={{
                           width: `${progressWidth}%`,
                         }}
@@ -127,30 +124,24 @@ export default function CategorySpending({
                     </div>
                   )}
                 </div>
-
                 <div className="category-values">
                   {hasBudget ? (
                     <>
-                      <strong>
-                        {Math.round(percentage)}%
-                      </strong>
-
-                      <span>
-                        {money(spent)} /{" "}
-                        {money(budget)}
-                      </span>
+                      <strong> {Math.round(percentage)}% </strong>
+                      <span> {money(spent)} / {money(budget)} </span>
                     </>
-                  ) : (
-                    <>
-                      <strong className="category-no-budget-label">
-                        No budget
-                      </strong>
+                  )
+                    : (
+                      <>
+                        <strong className="category-no-budget-label">
+                          No budget
+                        </strong>
 
-                      <span>
-                        {money(spent)} spent
-                      </span>
-                    </>
-                  )}
+                        <span>
+                          {money(spent)} spent
+                        </span>
+                      </>
+                    )}
                 </div>
               </div>
             );
