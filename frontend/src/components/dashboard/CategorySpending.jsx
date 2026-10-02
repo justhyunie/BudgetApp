@@ -127,7 +127,7 @@ export default function CategorySpending({
                 <div className="category-values">
                   {hasBudget ? (
                     <>
-                      <strong> {Math.round(percentage)}% </strong>
+                      <strong> {Math.ceil(percentage)}% </strong>
                       <span> {money(spent)} / {money(budget)} </span>
                     </>
                   )
