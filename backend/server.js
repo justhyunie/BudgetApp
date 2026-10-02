@@ -137,72 +137,76 @@ app.get("/api/transactions", async (req, res) => {
 
 app.post("/api/transactions", async (req, res) => {
   try {
-    const { date, description, amount, category } = req.body;
+    const {
+      date,
+      description,
+      amount,
+      category,
+      type,
+    } = req.body;
 
-    if (!date || typeof date !== "string") {
+    const numericAmount = Math.abs(Number(amount));
+
+    if (!date) {
       return res.status(400).json({
-        error: "Transaction date is required"
+        error: "Date is required",
       });
     }
 
-    if (!description || typeof description !== "string") {
+    if (!description || !description.trim()) {
       return res.status(400).json({
-        error: "Transaction description is required"
+        error: "Description is required",
       });
     }
 
-    const trimmedDescription = description.trim();
-
-    if (!trimmedDescription) {
+    if (!numericAmount || numericAmount <= 0) {
       return res.status(400).json({
-        error: "Transaction description is required"
+        error: "Amount must be greater than zero",
       });
     }
 
-    if (trimmedDescription.length > 200) {
-      return res.status(400).json({
-        error: "Transaction description must be 200 characters or fewer"
-      });
-    }
+    const transactionType =
+      type === "income" ? "income" : "expense";
 
-    const numericAmount = Number(amount);
-
-    if (!Number.isFinite(numericAmount)) {
-      return res.status(400).json({
-        error: "Transaction amount must be a number"
-      });
-    }
-
-    if (!category || typeof category !== "string") {
-      return res.status(400).json({
-        error: "Transaction category is required"
-      });
-    }
+    const transactionCategory =
+      transactionType === "income"
+        ? "Income"
+        : category || "Other";
 
     const result = await pool.query(
       `
-      INSERT INTO transactions
-        (date, description, amount, category)
-      VALUES
-        ($1, $2, $3, $4)
-      RETURNING *
+        INSERT INTO transactions (
+          date,
+          description,
+          amount,
+          category,
+          type
+        )
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING
+          id,
+          date,
+          description,
+          amount,
+          category,
+          type,
+          created_at
       `,
       [
         date,
-        trimmedDescription,
+        description.trim(),
         numericAmount,
-        category.trim()
-      ]
+        transactionCategory,
+        transactionType,
+      ],
     );
 
-    res.status(201).json(
-      normalizeTransaction(result.rows[0])
-    );
+    res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error(error);
+    console.error("POST /api/transactions:", error);
 
     res.status(500).json({
-      error: "Failed to create transaction"
+      error: "Failed to create transaction",
     });
   }
 });

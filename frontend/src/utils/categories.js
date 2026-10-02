@@ -9,6 +9,7 @@ export const DEFAULT_CATEGORIES = [
   "Subscriptions",
   "Debt",
   "Other",
+  "Income",
 ];
 
 export const CATEGORY_ICONS = {
@@ -34,7 +35,12 @@ export function getCategoriesFromBudgets(budgets) {
     .map((budget) => budget.category)
     .filter(Boolean);
 
-  return [...new Set([...DEFAULT_CATEGORIES, ...categories])];
+  return [
+    ...new Set([
+      ...DEFAULT_CATEGORIES,
+      ...categories,
+    ]),
+  ];
 }
 
 export function categoryIcon(category) {

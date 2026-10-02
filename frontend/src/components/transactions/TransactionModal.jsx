@@ -22,6 +22,20 @@ export default function TransactionModal({
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  function handleTypeChange(event) {
+    const nextType = event.target.value;
+
+    setType(nextType);
+
+    if (nextType === "income") {
+      setCategory("Income");
+    } else if (category === "Income") {
+      setCategory(
+        categories.find((item) => item !== "Income") || "Other",
+      );
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -61,13 +75,13 @@ export default function TransactionModal({
         ...transaction,
         amount: numericAmount,
         type,
+        category,
       });
     } catch (error) {
       console.error(error);
 
       setError(
-        error.message ||
-          "Failed to create transaction.",
+        error.message || "Failed to create transaction.",
       );
     } finally {
       setSaving(false);
@@ -98,17 +112,10 @@ export default function TransactionModal({
           <FormField label="Type">
             <select
               value={type}
-              onChange={(event) =>
-                setType(event.target.value)
-              }
+              onChange={handleTypeChange}
             >
-              <option value="expense">
-                Expense
-              </option>
-
-              <option value="income">
-                Income
-              </option>
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
             </select>
           </FormField>
         </div>
@@ -120,7 +127,11 @@ export default function TransactionModal({
             onChange={(event) =>
               setDescription(event.target.value)
             }
-            placeholder="e.g. Paycheck"
+            placeholder={
+              type === "income"
+                ? "e.g. Paycheck"
+                : "e.g. Groceries"
+            }
           />
         </FormField>
 
@@ -144,6 +155,7 @@ export default function TransactionModal({
               onChange={(event) =>
                 setCategory(event.target.value)
               }
+              disabled={type === "income"}
             >
               {categories.map((item) => (
                 <option key={item} value={item}>
@@ -175,9 +187,7 @@ export default function TransactionModal({
             className="primary-button"
             disabled={saving}
           >
-            {saving
-              ? "Saving..."
-              : "Add Transaction"}
+            {saving ? "Saving..." : "Add Transaction"}
           </button>
         </div>
       </form>
