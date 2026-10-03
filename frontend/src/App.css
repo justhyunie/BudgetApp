@@ -4141,3 +4141,108 @@ select:focus-visible {
     font-size: 9px;
   }
 }
+
+.wealth-account-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.wealth-account-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.wealth-account-row:last-child {
+  border-bottom: 0;
+}
+
+.wealth-account-info {
+  min-width: 0;
+}
+
+.wealth-account-info strong {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.wealth-account-info span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.wealth-asset,
+.wealth-liability {
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.wealth-asset {
+  color: var(--accent);
+}
+
+.wealth-liability {
+  color: var(--red);
+}
+
+.wealth-account-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.button-danger {
+  color: var(--red);
+  background: var(--red-soft);
+  border: 1px solid transparent;
+}
+
+.button-danger:hover {
+  border-color: var(--red);
+}
+
+@media (max-width: 720px) {
+  .wealth-account-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+  }
+
+  .wealth-account-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+.wealth-accounts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.wealth-accounts-header h2 {
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .wealth-accounts-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.wealth-account .button-danger {
+  width: auto;
+  justify-self: start;
+  white-space: nowrap;
+  padding: 7px 11px;
+}

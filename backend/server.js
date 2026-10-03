@@ -502,6 +502,8 @@ app.get("/api/accounts", async (req, res) => {
   }
 });
 
+
+
 app.post("/api/accounts", async (req, res) => {
   try {
     const { name, type, balance } = req.body;

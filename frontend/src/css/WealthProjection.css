@@ -1,0 +1,212 @@
+.wealth-projection {
+  margin-top: 24px;
+}
+
+.wealth-chart-description {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.wealth-projection-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin-top: 20px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--line);
+}
+
+.wealth-projection-stats > div {
+  padding: 14px 16px;
+  background: var(--surface-alt);
+}
+
+.wealth-projection-stats span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.wealth-projection-stats strong {
+  display: block;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.wealth-projection-stats strong.positive {
+  color: var(--accent);
+}
+
+.wealth-projection-stats strong.negative {
+  color: var(--red);
+}
+
+.wealth-chart {
+  width: 100%;
+  height: 360px;
+  margin-top: 24px;
+}
+
+.wealth-chart-tooltip {
+  min-width: 190px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.wealth-chart-tooltip > strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.wealth-chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding-top: 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.wealth-chart-tooltip-row strong {
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.wealth-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.wealth-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.legend-line {
+  display: inline-block;
+  width: 22px;
+  height: 2px;
+  background: var(--ink);
+}
+
+.legend-line.projected {
+  background: var(--accent);
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--accent) 0,
+    var(--accent) 7px,
+    transparent 7px,
+    transparent 12px
+  );
+}
+
+.legend-line.actual {
+  background: var(--ink);
+}
+
+.legend-line.monthly-net {
+  background: var(--red);
+}
+
+@media (max-width: 700px) {
+  .wealth-projection-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .wealth-chart {
+    height: 300px;
+  }
+
+  .wealth-chart-legend {
+    flex-direction: column;
+    gap: 9px;
+  }
+}
+
+.wealth-year-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wealth-year-nav strong {
+  min-width: 48px;
+  text-align: center;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.wealth-year-nav .secondary-button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.wealth-actual-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  margin-top: 20px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--line);
+}
+
+.wealth-actual-summary > div {
+  padding: 14px 16px;
+  background: var(--surface-alt);
+}
+
+.wealth-actual-summary span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.wealth-actual-summary strong {
+  display: block;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.wealth-actual-summary strong.positive {
+  color: var(--accent);
+}
+
+.wealth-actual-summary strong.negative {
+  color: var(--red);
+}
+
+@media (max-width: 700px) {
+  .wealth-actual-summary {
+    grid-template-columns: 1fr;
+  }
+}

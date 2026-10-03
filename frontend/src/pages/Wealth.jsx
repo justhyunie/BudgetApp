@@ -1,14 +1,33 @@
-import { useMemo } from "react";
+import {
+  useMemo,
+  useState,
+} from "react";
 
 import { api } from "../utils/api";
 import { money } from "../utils/formatting";
+
+import {
+  calculateWealthProjection,
+} from "../utils/wealth";
+
+import WealthAccounts from "../components/wealth/WealthAccounts";
+import WealthProjection from "../components/wealth/WealthProjection";
 
 export default function Wealth({
   accounts,
   setAccounts,
   wealthHistory,
   setWealthHistory,
+  transactions,
 }) {
+  const currentYear =
+    new Date().getFullYear();
+
+  const [
+    projectionYear,
+    setProjectionYear,
+  ] = useState(currentYear);
+
   const {
     assets,
     liabilities,
@@ -22,7 +41,9 @@ export default function Wealth({
       .reduce(
         (sum, account) =>
           sum +
-          Number(account.balance || 0),
+          Math.abs(
+            Number(account.balance) || 0,
+          ),
         0,
       );
 
@@ -35,7 +56,7 @@ export default function Wealth({
         (sum, account) =>
           sum +
           Math.abs(
-            Number(account.balance || 0),
+            Number(account.balance) || 0,
           ),
         0,
       );
@@ -43,37 +64,10 @@ export default function Wealth({
     return {
       assets,
       liabilities,
-      netWorth: assets - liabilities,
+      netWorth:
+        assets - liabilities,
     };
   }, [accounts]);
-
-  async function updateAccount(
-    id,
-    field,
-    value,
-  ) {
-    try {
-      const updated = await api(
-        `/api/accounts/${id}`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({
-            [field]: value,
-          }),
-        },
-      );
-
-      setAccounts((current) =>
-        current.map((account) =>
-          account.id === id
-            ? updated
-            : account,
-        ),
-      );
-    } catch (error) {
-      console.error(error);
-    }
-  }
 
   async function saveWealthSnapshot() {
     try {
@@ -96,16 +90,21 @@ export default function Wealth({
     }
   }
 
-  const assetAccounts = accounts.filter(
-    (account) =>
-      account.type !== "liability",
+  const projection = useMemo(
+    () =>
+      calculateWealthProjection({
+        transactions,
+        wealthHistory,
+        currentNetWorth: netWorth,
+        year: projectionYear,
+      }),
+    [
+      transactions,
+      wealthHistory,
+      netWorth,
+      projectionYear,
+    ],
   );
-
-  const liabilityAccounts =
-    accounts.filter(
-      (account) =>
-        account.type === "liability",
-    );
 
   return (
     <div className="page wealth-page">
@@ -151,6 +150,7 @@ export default function Wealth({
         <div className="wealth-stat-grid">
           <div className="wealth-stat">
             <span>Assets</span>
+
             <strong>
               {money(assets)}
             </strong>
@@ -158,6 +158,7 @@ export default function Wealth({
 
           <div className="wealth-stat">
             <span>Liabilities</span>
+
             <strong>
               {money(liabilities)}
             </strong>
@@ -165,143 +166,16 @@ export default function Wealth({
         </div>
       </section>
 
-      <div className="wealth-grid">
-        <section className="panel">
-          <div className="panel-header">
-            <div>
-              <div className="section-kicker">
-                What You Own
-              </div>
+      <WealthAccounts
+        accounts={accounts}
+        setAccounts={setAccounts}
+      />
 
-              <h2>Assets</h2>
-            </div>
-
-            <strong>
-              {money(assets)}
-            </strong>
-          </div>
-
-          <div className="wealth-account-list">
-            {assetAccounts.length === 0 ? (
-              <div className="empty-state">
-                No assets yet.
-              </div>
-            ) : (
-              assetAccounts.map((account) => (
-                <div
-                  className="wealth-account"
-                  key={account.id}
-                >
-                  <div className="wealth-account-info">
-                    <strong>
-                      {account.name}
-                    </strong>
-
-                    <span>
-                      {account.type ||
-                        "Asset"}
-                    </span>
-                  </div>
-
-                  <div className="wealth-account-value">
-                    {money(
-                      account.balance,
-                    )}
-                  </div>
-
-                  <input
-                    className="wealth-account-input"
-                    type="number"
-                    step="0.01"
-                    value={
-                      account.balance ?? ""
-                    }
-                    onChange={(event) =>
-                      updateAccount(
-                        account.id,
-                        "balance",
-                        Number(
-                          event.target.value,
-                        ),
-                      )
-                    }
-                    aria-label={`${account.name} balance`}
-                  />
-                </div>
-              ))
-            )}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-header">
-            <div>
-              <div className="section-kicker">
-                What You Owe
-              </div>
-
-              <h2>Liabilities</h2>
-            </div>
-
-            <strong>
-              {money(liabilities)}
-            </strong>
-          </div>
-
-          <div className="wealth-account-list">
-            {liabilityAccounts.length === 0 ? (
-              <div className="empty-state">
-                No liabilities yet.
-              </div>
-            ) : (
-              liabilityAccounts.map(
-                (account) => (
-                  <div
-                    className="wealth-account"
-                    key={account.id}
-                  >
-                    <div className="wealth-account-info">
-                      <strong>
-                        {account.name}
-                      </strong>
-
-                      <span>
-                        Liability
-                      </span>
-                    </div>
-
-                    <div className="wealth-account-value liability">
-                      {money(
-                        account.balance,
-                      )}
-                    </div>
-
-                    <input
-                      className="wealth-account-input"
-                      type="number"
-                      step="0.01"
-                      value={
-                        account.balance ?? ""
-                      }
-                      onChange={(event) =>
-                        updateAccount(
-                          account.id,
-                          "balance",
-                          Number(
-                            event.target
-                              .value,
-                          ),
-                        )
-                      }
-                      aria-label={`${account.name} balance`}
-                    />
-                  </div>
-                ),
-              )
-            )}
-          </div>
-        </section>
-      </div>
+      <WealthProjection
+        projection={projection}
+        year={projectionYear}
+        onYearChange={setProjectionYear}
+      />
 
       <section className="panel wealth-history-panel">
         <div className="panel-header">

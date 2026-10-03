@@ -76,7 +76,7 @@ export default function App() {
 
       setAppError(
         error.message ||
-          "Failed to load application data.",
+        "Failed to load application data.",
       );
     } finally {
       setLoading(false);
@@ -193,8 +193,10 @@ export default function App() {
           setAccounts={setAccounts}
           wealthHistory={wealthHistory}
           setWealthHistory={setWealthHistory}
+          transactions={transactions}
         />
       )}
+
 
       {activePage === "settings" && (
         <Settings
