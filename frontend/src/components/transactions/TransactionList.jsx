@@ -12,10 +12,7 @@ export default function TransactionList({
   setError,
 }) {
   async function deleteTransaction(id) {
-   /*  if (!window.confirm("Delete this transaction?")) {
-      return;
-    } */
-  
+    setError("");
 
     try {
       await api(`/api/transactions/${id}`, {
@@ -25,13 +22,11 @@ export default function TransactionList({
       setTransactions((current) =>
         current.filter(
           (transaction) =>
-            transaction.id !== id,
+            Number(transaction.id) !== Number(id),
         ),
       );
-
-      setError("");
     } catch (error) {
-      console.error(error);
+      console.error("Delete transaction failed:", error);
 
       setError(
         error.message ||
@@ -95,10 +90,10 @@ export default function TransactionList({
               className="delete-button"
               type="button"
               onClick={() =>
-                deleteTransaction(
-                  transaction.id,
-                )
-              }
+                {console.log("DELETE CLICKED:", transaction.id)
+
+                deleteTransaction(transaction.id)
+              }}
               title="Delete transaction"
               aria-label={`Delete ${transaction.description}`}
             >

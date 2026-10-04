@@ -50,7 +50,7 @@ export default function App() {
     [budgets],
   );
 
-  async function loadData() {
+  async function loadData() {  //data dump happens here (what best practice are there if I need to ping for data within other componenets?
     setLoading(true);
     setAppError("");
 

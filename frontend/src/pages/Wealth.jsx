@@ -20,6 +20,7 @@ export default function Wealth({
   setWealthHistory,
   transactions,
 }) {
+  
   const currentYear =
     new Date().getFullYear();
 
