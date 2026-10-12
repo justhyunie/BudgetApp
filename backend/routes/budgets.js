@@ -1,15 +1,9 @@
+
 const express = require("express");
 const router = express.Router();
 
 const pool = require("../db");
 const { parseId } = require("../utils/validation");
-
-function normalizeTransaction(row) {
-  return {
-    ...row,
-    amount: Number(row.amount)
-  };
-}
 
 function normalizeBudget(row) {
   return {
@@ -18,212 +12,149 @@ function normalizeBudget(row) {
   };
 }
 
-/*
-|--------------------------------------------------------------------------
-| GET ALL TRANSACTIONS
-|--------------------------------------------------------------------------
-*/
-
+// GET /api/budgets
 router.get("/", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT
-        id,
-        date,
-        description,
-        amount,
-        category,
-        type,
-        created_at
-      FROM transactions
-      ORDER BY date DESC, id DESC
+      SELECT id, category, amount, created_at
+      FROM budgets
+      ORDER BY category ASC
     `);
 
-    res.json(result.rows.map(normalizeTransaction));
+    res.json(result.rows.map(normalizeBudget));
   } catch (error) {
-    console.error(error);
-
+    console.error("GET /api/budgets:", error);
     res.status(500).json({
-      error: "Failed to retrieve transactions"
+      error: "Failed to retrieve budgets",
     });
   }
 });
 
-/*
-|--------------------------------------------------------------------------
-| CREATE TRANSACTION
-|--------------------------------------------------------------------------
-*/
-
+// POST /api/budgets
 router.post("/", async (req, res) => {
   try {
     const { category, amount } = req.body;
 
-    const numericAmount = Number(amount);
-
-    if (!category || !category.trim()) {
+    if (typeof category !== "string" || !category.trim()) {
       return res.status(400).json({
-        error: "Category is required"
+        error: "Budget category is required",
       });
     }
 
-    if (!Number.isFinite(numericAmount) || numericAmount < 0) {
+    if (
+      amount === undefined ||
+      amount === null ||
+      amount === "" ||
+      !Number.isFinite(Number(amount)) ||
+      Number(amount) < 0
+    ) {
       return res.status(400).json({
-        error: "Amount must be a valid number"
+        error: "Budget amount must be a valid non-negative number",
       });
     }
 
     const result = await pool.query(
-      `
-      INSERT INTO budgets (
-        category,
-        amount
-      )
-      VALUES ($1, $2)
-      RETURNING *
-      `,
-      [
-        category.trim(),
-        numericAmount
-      ]
+      `INSERT INTO budgets (category, amount)
+       VALUES ($1, $2)
+       RETURNING *`,
+      [category.trim(), Number(amount)]
     );
 
-    res.status(201).json(
-      normalizeBudget(result.rows[0])
-    );
+    res.status(201).json(normalizeBudget(result.rows[0]));
   } catch (error) {
-    console.error(
-      "POST /api/budgets:",
-      error
-    );
-
     if (error.code === "23505") {
       return res.status(409).json({
-        error: "A budget for this category already exists"
+        error: "A budget for this category already exists",
       });
     }
 
+    console.error("POST /api/budgets:", error);
     res.status(500).json({
       error: "Failed to create budget",
-      details: error.message
     });
   }
 });
-/*
-|--------------------------------------------------------------------------
-| UPDATE TRANSACTION
-|--------------------------------------------------------------------------
-*/
 
+// PATCH /api/budgets/:id
 router.patch("/:id", async (req, res) => {
   try {
     const id = parseId(req.params.id);
 
     if (id === null) {
       return res.status(400).json({
-        error: "Transaction ID must be a positive integer"
+        error: "Budget ID must be a positive integer",
       });
     }
 
-    const {
-      date,
-      description,
-      amount,
-      category
-    } = req.body;
+    const { amount } = req.body;
 
-    const numericAmount = Number(amount);
-
-    if (!date || !description || !category) {
+    if (
+      amount === undefined ||
+      amount === null ||
+      amount === "" ||
+      !Number.isFinite(Number(amount)) ||
+      Number(amount) < 0
+    ) {
       return res.status(400).json({
-        error: "Date, description, amount, and category are required"
-      });
-    }
-
-    if (!Number.isFinite(numericAmount)) {
-      return res.status(400).json({
-        error: "Amount must be a number"
+        error: "Budget amount must be a valid non-negative number",
       });
     }
 
     const result = await pool.query(
-      `
-      UPDATE transactions
-      SET
-        date = $1,
-        description = $2,
-        amount = $3,
-        category = $4
-      WHERE id = $5
-      RETURNING *
-      `,
-      [
-        date,
-        description.trim(),
-        numericAmount,
-        category.trim(),
-        id
-      ]
+      `UPDATE budgets
+       SET amount = $1
+       WHERE id = $2
+       RETURNING *`,
+      [Number(amount), id]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({
-        error: "Transaction not found"
+        error: "Budget not found",
       });
     }
 
-    res.json(
-      normalizeTransaction(result.rows[0])
-    );
+    res.json(normalizeBudget(result.rows[0]));
   } catch (error) {
-    console.error(error);
-
+    console.error("PATCH /api/budgets/:id:", error);
     res.status(500).json({
-      error: "Failed to update transaction"
+      error: "Failed to update budget",
     });
   }
 });
 
-/*
-|--------------------------------------------------------------------------
-| DELETE TRANSACTION
-|--------------------------------------------------------------------------
-*/
-
+// DELETE /api/budgets/:id
 router.delete("/:id", async (req, res) => {
   try {
     const id = parseId(req.params.id);
 
     if (id === null) {
       return res.status(400).json({
-        error: "Transaction ID must be a positive integer"
+        error: "Budget ID must be a positive integer",
       });
     }
 
     const result = await pool.query(
-      `
-      DELETE FROM transactions
-      WHERE id = $1
-      RETURNING *
-      `,
+      `DELETE FROM budgets
+       WHERE id = $1
+       RETURNING *`,
       [id]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({
-        error: "Transaction not found"
+        error: "Budget not found",
       });
     }
 
     res.json({
-      message: "Transaction deleted",
-      transaction: normalizeTransaction(result.rows[0])
+      message: "Budget deleted",
+      budget: normalizeBudget(result.rows[0]),
     });
   } catch (error) {
-    console.error(error);
-
+    console.error("DELETE /api/budgets/:id:", error);
     res.status(500).json({
-      error: "Failed to delete transaction"
+      error: "Failed to delete budget",
     });
   }
 });

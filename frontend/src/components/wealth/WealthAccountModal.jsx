@@ -10,10 +10,15 @@ export default function WealthAccountModal({
   const [error, setError] = useState("");
 
   function handleSubmit(event) {
+    
     event.preventDefault();
 
     const trimmedName = name.trim();
     const numericBalance = Number(balance);
+
+    console.log(trimmedName)
+    console.log(numericBalance)
+    
 
     if (!trimmedName) {
       setError(
