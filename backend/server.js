@@ -43,15 +43,17 @@ app.use((req, res, next) => {
 app.use(helmet());
 app.use(express.json());
 
+
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 200,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 500,
   standardHeaders: "draft-8",
   legacyHeaders: false,
   message: {
     error: "Too many requests. Please try again later."
   }
 });
+
 
 app.use("/api/", apiLimiter);
 
