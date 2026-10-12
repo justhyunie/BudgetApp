@@ -41,20 +41,34 @@ function parseCsvDate(value) {
   return date.toISOString().slice(0, 10);
 }
 
+
 function parseCsvAmount(value) {
-  if (!value) return 0;
+  if (value == null || String(value).trim() === "") {
+    return 0;
+  }
 
   const stringValue = String(value).trim();
-  const isNegative = /^\(.*\)$/.test(stringValue);
+
+  // Accounting notation: ($1,234.56) means -1234.56
+  const isNegative =
+    stringValue.startsWith("-") ||
+    (stringValue.startsWith("(") &&
+      stringValue.endsWith(")"));
 
   const cleaned = stringValue
-    .replace(/[$,\s]/g, "")
-    .replace(/[()]/g, "");
+    .replace(/[$,\s()]/g, "")
+    .replace(/^-/, "")
+    .replace(/-$/, "");
 
-  const amount = Number(cleaned) || 0;
+  const amount = Number(cleaned);
+
+  if (!Number.isFinite(amount)) {
+    throw new Error(`Invalid transaction amount: ${value}`);
+  }
 
   return isNegative ? -amount : amount;
 }
+
 
 function parseTransactionsCsv(text) {
   const lines = text
